@@ -121,6 +121,7 @@ export default async function TournamentAdminPage({
         <PlayerManagement
           tournament={typedTournament}
           players={typedPlayers}
+          bracketCount={bracketCount || 0}
         />
       )}
 

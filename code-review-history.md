@@ -1,0 +1,712 @@
+# PR Review - Bracket Result Display Refactor
+
+**Review Date:** 2026-01-10
+**Branch:** feature/bracket-result-display
+**Reviewer:** Code Review Agent
+**Iteration:** 1
+
+---
+
+## Summary
+
+This PR refactors how bracket results are displayed by removing redundant tournament-wide data (`actual_winner_seed`, `actual_loser_seed`) from the `picks` table and instead computing actual participants dynamically from the `results` table at display time. This is a clean architectural improvement that eliminates data duplication across all user brackets. The implementation is well-structured with proper separation of concerns, good test coverage for the new utility, and thoughtful UI enhancements for showing unexpected participants.
+
+**Note:** This review covers both the committed changes AND the uncommitted working directory changes, which together form the complete refactored implementation.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+*None found*
+
+---
+
+### 🟠 High
+
+*None found*
+
+---
+
+### 🟡 Medium
+
+#### 1. Magic Color Values (Hardcoded Hex)
+**File:** `src/components/bracket/PlayerSlot.tsx` (lines 45-46, 101, 112)
+
+**Issue:**
+The component uses hardcoded hex colors (`#252323`, `#f0b224`, `#3a3a45`) instead of CSS variables like the rest of the codebase.
+
+**Why it matters:**
+This breaks the theming pattern established in the codebase where all colors use CSS variables like `rgb(var(--color-*))`. If the app adds dark/light theme switching in the future, these hardcoded values won't adapt.
+
+**Current code:**
+```typescript
+const bgClass = isUnexpectedWinner || isUnexpectedParticipant
+  ? "bg-[#252323]"
+  // ...
+<div className="text-xs text-[#f0b224] pt-1 border-t border-[#3a3a45] mt-1 w-full">
+```
+
+**Suggested fix:**
+Add these colors to the CSS variables system and use them consistently:
+```css
+/* In global CSS or tailwind config */
+--color-unexpected-bg: 37 35 35; /* #252323 */
+--color-unexpected-text: 240 178 36; /* #f0b224 */
+--color-unexpected-border: 58 58 69; /* #3a3a45 */
+```
+Then use:
+```typescript
+const bgClass = isUnexpectedWinner || isUnexpectedParticipant
+  ? "bg-[rgb(var(--color-unexpected-bg))]"
+```
+
+---
+
+#### 2. Conflicting Migration Files
+**Files:**
+- `supabase/migrations/20260110155215_add_actual_result_to_picks.sql` (committed)
+- `supabase/migrations/20260110113232_remove_actual_result_columns.sql` (uncommitted)
+
+**Issue:**
+There are two migration files with conflicting purposes - one adds columns and one removes them. The timestamps suggest the "add" migration was created later (155215 > 113232), which means in a fresh deployment, the columns would be added AFTER being removed, leaving them in place.
+
+**Why it matters:**
+This will cause schema confusion and potential deployment issues. The migration sequence needs to be cleaned up before merging.
+
+**Suggested fix:**
+Since the final design does NOT include these columns on picks:
+1. Delete the `20260110155215_add_actual_result_to_picks.sql` migration file (the one that ADDS columns)
+2. If these columns were already deployed to production, keep the removal migration
+3. If the columns were never deployed, delete both migration files
+
+---
+
+#### 3. Unused `position` Prop in PlayerSlot
+**File:** `src/components/bracket/PlayerSlot.tsx` (line 9, 24)
+
+**Issue:**
+The `position` prop is defined in the interface and destructured but never used in the component.
+
+**Why it matters:**
+Dead code adds confusion and maintenance burden.
+
+**Suggested fix:**
+Remove the `position` prop from the interface and destructure statement, or use it if it serves a purpose.
+
+---
+
+### 🔵 Low
+
+#### 4. next-env.d.ts Changes
+**File:** `next-env.d.ts`
+
+**Issue:**
+This file changed from `.next/types/routes.d.ts` to `.next/dev/types/routes.d.ts`. This appears to be an auto-generated file that shouldn't be committed.
+
+**Why it matters:**
+This can cause unnecessary merge conflicts and isn't a real code change.
+
+**Suggested fix:**
+Revert this change before committing:
+```bash
+git checkout main -- next-env.d.ts
+```
+
+---
+
+#### 5. ui-changes Directory
+**File:** `ui-changes/` (untracked)
+
+**Issue:**
+There's an untracked `ui-changes/` directory that wasn't described as part of this PR.
+
+**Why it matters:**
+This might contain test files, screenshots, or other artifacts that should either be committed or gitignored.
+
+**Suggested fix:**
+Review the contents and either commit them if relevant, add to `.gitignore`, or delete if not needed.
+
+---
+
+### 🟢 Praise
+
+#### Clean Architectural Decision
+The decision to compute actual participants from results at display time rather than caching them per-pick is the right architectural choice. Tournament results are tournament-wide, not user-specific, so storing them on each user's picks was indeed redundant.
+
+#### Well-Designed actualParticipants Utility
+The `src/lib/bracket/actualParticipants.ts` file is well-structured with:
+- Clear type exports (`ActualParticipants`, `MatchResult`)
+- Reusable helper functions (`buildResultMap`, `getActualWinner`, `getActualLoser`)
+- Good separation between single-match and batch computation
+- Proper handling of both 16-player and 24-player tournament formats
+
+#### Comprehensive Test Coverage
+The `__tests__/unit/lib/actualParticipants.test.ts` file provides thorough coverage including:
+- Fixed seed cases for opening round
+- Cascading winner propagation through rounds
+- Consolation match losers
+- 16-player tournament handling
+- Edge cases for missing results
+
+#### Thoughtful UI Enhancement
+The "Expected X" message display with distinct styling (dark background, yellow text) provides clear visual feedback when a user's expected participant differs from the actual participant due to earlier upset results.
+
+#### Type Safety Maintained
+The refactor properly updates the Pick interface and all consuming components, maintaining TypeScript type safety throughout.
+
+#### Proper Page Updates
+Both bracket view pages (`/bracket/[id]/page.tsx` and `/bracket/[id]/edit/page.tsx`) now fetch results and pass them to BracketView, enabling the cascading display feature.
+
+---
+
+## Proposed Standards
+
+### Proposed Standard: CSS Variable Consistency
+
+**Rule:** All color values in components must use CSS variables (`rgb(var(--color-*))`) rather than hardcoded hex values.
+
+**Rationale:** Maintains theming consistency, enables future dark/light mode support, and keeps all colors centrally manageable.
+
+**Example of violation:**
+```tsx
+<div className="bg-[#252323] text-[#f0b224]">
+```
+
+**Example of compliance:**
+```tsx
+<div className="bg-[rgb(var(--color-unexpected-bg))] text-[rgb(var(--color-unexpected-text))]">
+```
+
+**Origin:** Found in PlayerSlot.tsx during review on 2026-01-10
+
+---
+
+## Verdict
+
+**Status:** CHANGES REQUESTED
+
+The architecture and implementation are solid, but the following issues should be addressed before merge:
+
+1. **Migration files conflict** - Clean up the duplicate/conflicting migration files to prevent schema issues
+2. **Hardcoded colors** - Convert hex values to CSS variables for consistency
+3. **Dead code** - Remove unused `position` prop from PlayerSlot
+
+All tests pass (182 tests) and TypeScript compilation succeeds. Once these items are addressed, this is ready to merge.
+
+---
+
+# PR Review - Content Updates and Dark Mode Enforcement (Iteration 2)
+
+**Review Date:** 2026-01-10
+**Branch:** feature/bracket-result-display
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of 5
+
+---
+
+## Summary
+
+This review covers additional changes: adding informational content to the Privacy and About pages, and enforcing dark mode by simplifying the theme system. The changes are clean and straightforward. The implementation correctly preserves light mode CSS and code comments for future re-enablement. No security issues or bugs were found.
+
+---
+
+## Findings
+
+### Critical
+
+None.
+
+### High
+
+None.
+
+### Medium
+
+None.
+
+### Low
+
+None.
+
+### Praise
+
+#### Clean Theme Simplification
+**Files:** `src/components/ThemeProvider.tsx`, `src/components/SettingsButton.tsx`, `src/app/layout.tsx`
+
+The approach to enforcing dark mode is well-executed:
+- Comments clearly indicate the intent and that code is preserved for future use
+- The simplification removes unnecessary state management and effects
+- The inline script in layout.tsx is reduced to a single, clear line
+- SettingsButton returns null with clear documentation about why
+
+#### Good Content Additions
+**Files:** `src/app/about/page.tsx`, `src/app/privacy/page.tsx`
+
+- The "In Plain English" section for the privacy policy is user-friendly and transparent
+- The IFPA disclaimer is appropriately placed and clearly worded
+- Both sections use consistent styling with existing page patterns
+
+#### Proper Use of HTML Entities
+**File:** `src/app/about/page.tsx` (line 101), `src/app/privacy/page.tsx`
+
+Correct use of `{"'"}` and `&apos;` for apostrophes in JSX strings.
+
+---
+
+## Proposed Standards
+
+None. This PR follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+All changes are clean, well-documented, and follow existing codebase patterns. No security, architectural, or code quality issues were found. The decision to preserve light mode code for future use is sensible and well-documented throughout.
+
+---
+
+# PR Review — Fix Mutable Search Path Security Warnings
+
+**Review Date:** 2026-01-10
+**Branch:** main (1 commit ahead of origin/main)
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR adds a database migration that fixes mutable `search_path` security warnings for three Supabase functions (`handle_updated_at`, `is_admin`, `handle_new_user`). The fix is straightforward and follows Supabase's recommended security best practice by setting `search_path` to an empty string, which prevents search path manipulation attacks.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+None.
+
+---
+
+### 🟢 Praise
+
+#### Well-Documented Security Fix
+**File:** `supabase/migrations/20260110174001_fix_function_search_paths.sql`
+
+The migration includes:
+- Clear comment explaining what the migration does
+- Reference to official Supabase documentation
+- Explanation of why setting `search_path` to empty string is the correct approach (prevents search path manipulation attacks by requiring fully schema-qualified references)
+
+This is exactly how database migrations should be documented.
+
+#### Appropriate Solution
+Setting `search_path = ''` is the correct fix for this security warning. This approach:
+1. Forces all object references within the functions to be fully schema-qualified
+2. Prevents potential attackers from manipulating the search path to substitute malicious objects
+3. Follows Supabase's official security recommendations
+
+#### Clean and Minimal Change
+The migration is focused and does exactly one thing - it fixes the security warnings without unnecessary changes or scope creep.
+
+---
+
+## Proposed Standards
+
+None. This PR follows existing best practices.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+The migration is:
+- Security-focused and addresses a legitimate vulnerability
+- Well-documented with references to official documentation
+- Minimal and focused on the specific issue
+- Following Supabase's recommended best practices
+
+No blocking issues found. The code is ready to be pushed to GitHub.
+
+---
+
+# PR Review - Add Vercel Analytics and Speed Insights
+
+**Review Date:** 2026-01-10
+**Branch:** feature/vercel-analytics
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of 5
+
+---
+
+## Summary
+
+This PR adds Vercel Analytics and Speed Insights to the application by installing the official Vercel packages and integrating them into the root layout. The implementation follows Vercel's recommended approach and is straightforward. The changes are minimal and well-contained.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+#### Component Placement Outside ThemeProvider
+
+**File:** `src/app/layout.tsx` (lines 39-40)
+
+**Issue:**
+The `<Analytics />` and `<SpeedInsights />` components are placed outside the `<ThemeProvider>` wrapper. While this works correctly (these components don't render visible UI and don't need theme context), it's worth noting for future reference that any components placed outside ThemeProvider won't have access to theme context.
+
+**Why it matters:**
+Not a functional issue - just a minor architectural observation. The placement is actually correct for these specific components since they don't need theme context.
+
+**Suggested action:**
+No change needed. The current placement is appropriate.
+
+---
+
+### 🟢 Praise
+
+#### Clean Implementation
+The implementation follows Vercel's official documentation exactly. The imports use the correct subpaths (`@vercel/analytics/react` and `@vercel/speed-insights/next`) which are optimized for React/Next.js applications.
+
+#### Minimal Footprint
+The changes are appropriately scoped - only the necessary files are modified (package.json and layout.tsx), and no extraneous code was added.
+
+#### Correct Package Versions
+Using recent stable versions of both packages (1.6.1 and 1.3.1) which are compatible with Next.js 16.
+
+---
+
+## Proposed Standards
+
+None. This is a standard third-party integration that follows established patterns.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+The implementation is clean, follows best practices, and correctly integrates Vercel Analytics and Speed Insights. No blocking issues were found.
+
+---
+
+# PR Review — MP-001 Match Play API Client
+
+**Review Date:** 2026-01-11
+**Branch:** main (uncommitted changes)
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR implements a Match Play Events API client for integrating with external tournament data. The implementation includes well-typed interfaces, a clean client class with proper error handling, and comprehensive unit tests using MSW. Overall, this is a solid implementation that follows existing codebase patterns.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+#### 1. Missing index.ts barrel export
+
+**File:** `src/lib/matchplay/` (missing file)
+
+**Issue:**
+The matchplay folder is missing an `index.ts` file to re-export its types and client. Other lib directories like `src/lib/scoring/` use barrel exports for cleaner imports.
+
+**Why it matters:**
+Inconsistent with existing codebase patterns. Without a barrel export, consumers must import from specific files like `@/lib/matchplay/client` and `@/lib/matchplay/types` separately, rather than `@/lib/matchplay`.
+
+**Suggested fix:**
+Create `src/lib/matchplay/index.ts`:
+```typescript
+export { MatchPlayClient, createMatchPlayClient } from './client';
+export type {
+  MatchPlayTournament,
+  MatchPlayTournamentWithPlayers,
+  MatchPlayPlayer,
+  MatchPlayGame,
+  MatchPlayGamePlayer,
+  MatchPlayApiResponse,
+  MatchPlayApiListResponse,
+  MatchPlayApiError,
+} from './types';
+export { MatchPlayError } from './types';
+```
+
+---
+
+#### 2. next-env.d.ts modification should not be committed
+
+**File:** `next-env.d.ts` (line 3)
+
+**Issue:**
+The diff shows a change from `.next/types/routes.d.ts` to `.next/dev/types/routes.d.ts`. This appears to be an auto-generated change from Next.js that shouldn't be part of this feature PR.
+
+**Why it matters:**
+This is an unrelated change that could cause issues or confusion. The file header explicitly states "This file should not be edited."
+
+**Suggested fix:**
+Revert this change with `git checkout next-env.d.ts` before committing.
+
+---
+
+### 🔵 Low
+
+#### 1. Consider whether createMatchPlayClient factory is needed
+
+**File:** `src/lib/matchplay/client.ts` (lines 128-130)
+
+**Issue:**
+The codebase uses named exports throughout (which is good for tree-shaking), but having `createMatchPlayClient` as a factory function alongside the class constructor might be redundant since they do exactly the same thing.
+
+**Why it matters:**
+Minor API surface area question - having both `new MatchPlayClient(token)` and `createMatchPlayClient(token)` that do the same thing. Consider if the factory function is needed or if the class constructor is sufficient.
+
+**Suggested fix:**
+This is optional - keep both if you anticipate adding initialization logic to the factory function later, or remove `createMatchPlayClient` if it's not adding value. No action required.
+
+---
+
+### 🟢 Praise
+
+#### 1. Excellent type definitions
+
+**File:** `src/lib/matchplay/types.ts`
+
+The types are well-documented with clear section separators, proper use of union types for status fields, and nullable fields are correctly typed. The custom `MatchPlayError` class properly extends `Error` and includes useful metadata (status, code).
+
+---
+
+#### 2. Comprehensive error handling
+
+**File:** `src/lib/matchplay/client.ts`
+
+The `parseErrorBody` method gracefully handles both JSON and non-JSON error responses. The error handling doesn't expose internal details and properly wraps API errors in a custom error type with structured metadata.
+
+---
+
+#### 3. Thorough test coverage
+
+**File:** `__tests__/unit/lib/matchplay-client.test.ts`
+
+Tests cover:
+- Constructor with explicit and environment tokens
+- Missing token error case
+- All API methods (getTournament, getTournamentWithPlayers, getGames, getCompletedGames)
+- Multiple error scenarios (404, 401, 429, 500)
+- Non-JSON error response handling
+- Factory function
+
+The use of MSW for API mocking follows existing test patterns in the codebase.
+
+---
+
+#### 4. Good .env.example documentation
+
+**Files:** `.env.example`, `.env.test.example`
+
+Clear comments explain where to obtain the API token and mark it as optional. This helps new developers understand the integration.
+
+---
+
+## Proposed Standards
+
+None - this PR follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** CHANGES_REQUESTED
+
+Two medium-severity issues need to be addressed before merge:
+
+1. **Add barrel export** - Create `src/lib/matchplay/index.ts` to match codebase conventions
+2. **Revert next-env.d.ts** - This auto-generated file change should not be committed
+
+Both are quick fixes and will bring this PR to approved status.
+
+---
+
+# PR Review — MP-001 Match Play API Client (Re-review)
+
+**Review Date:** 2026-01-11
+**Branch:** main (uncommitted changes)
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of max 5
+
+---
+
+## Summary
+
+This is a re-review after fixes were applied. The Match Play API client implementation now includes the barrel export at `src/lib/matchplay/index.ts` and the `next-env.d.ts` has been reverted. All tests pass (13/13) and TypeScript type checking passes. The implementation is clean, well-typed, and ready for commit.
+
+---
+
+## Previous Issues - Resolution Status
+
+| Issue | Status |
+|-------|--------|
+| Missing `src/lib/matchplay/index.ts` barrel export | FIXED |
+| `next-env.d.ts` modification | FIXED |
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+#### Consider adding JSDoc for MatchPlayError class
+
+**File:** `src/lib/matchplay/types.ts` (lines 91-101)
+
+**Issue:**
+The `MatchPlayError` class lacks JSDoc documentation explaining its purpose and usage.
+
+**Why it matters:**
+Other developers may not immediately understand when to use this error class vs a generic Error. This is a minor documentation improvement.
+
+**Suggested fix (optional):**
+```typescript
+/**
+ * Custom error class for Match Play API errors.
+ * Contains status code and optional error code from the API response.
+ */
+export class MatchPlayError extends Error {
+  // ...
+}
+```
+
+---
+
+### 🟢 Praise
+
+#### Excellent Type Definitions
+**File:** `src/lib/matchplay/types.ts`
+
+The type definitions are comprehensive and well-organized with clear section separators. The use of union types for status fields (`'created' | 'started' | 'completed'`) provides good type safety.
+
+#### Clean Barrel Export Pattern
+**File:** `src/lib/matchplay/index.ts`
+
+The barrel export follows the existing pattern in the codebase (matching `src/lib/scoring/index.ts`) and cleanly separates type exports from value exports.
+
+#### Comprehensive Test Coverage
+**File:** `__tests__/unit/lib/matchplay-client.test.ts`
+
+Tests cover:
+- Constructor behavior (explicit token, env token, missing token)
+- Successful API calls
+- Error handling (404, 401, 429, 500)
+- Non-JSON error responses
+- All public methods
+
+This is excellent test coverage for an API client.
+
+#### Robust Error Handling
+**File:** `src/lib/matchplay/client.ts` (lines 109-120)
+
+The `parseErrorBody` method gracefully handles non-JSON error responses, which is a common edge case with HTTP APIs.
+
+---
+
+## Non-Code Items
+
+### Untracked File: "git error"
+There's an untracked file named "git error" in the repository root that appears to be a PNG screenshot. This should be deleted before committing or added to `.gitignore` if it's intentional. This is outside the scope of the PR but worth noting.
+
+---
+
+## Proposed Standards
+
+None. The implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+All previous issues have been resolved:
+- Barrel export at `src/lib/matchplay/index.ts` is present and follows existing patterns
+- `next-env.d.ts` is no longer modified (verified via `git status`)
+- Tests pass (13/13)
+- TypeScript type checking passes
+- Code follows existing codebase conventions
+
+The only remaining item is a LOW-severity JSDoc suggestion, which is optional. Ready to commit and push.

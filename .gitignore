@@ -51,8 +51,6 @@ feature-plans/
 # Project Planning & Review Documents
 mobile-project-plan.md
 mobile-pr*.md
-code-review-history.md
-ui-implementation-guidelines.md
 
 # Playwright
 test-results/

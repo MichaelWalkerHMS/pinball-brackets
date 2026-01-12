@@ -1,13 +1,16 @@
 /**
  * Result Mapper for Match Play to Internal Format
  *
- * Transforms Match Play game data into our internal Result format,
- * handling winner/loser determination and game score extraction.
+ * Transforms Match Play game data into our internal Result format.
+ * Handles:
+ * - Filtering bye games and multi-player consolation matches
+ * - Round detection via standard bracket indexing
+ * - Winner/loser determination from resultPositions
+ * - Semi-final tracking for Finals vs Consolation validation
  */
 
-import type { MatchPlayGame, MatchPlayGamePlayer } from './types';
+import type { MatchPlayGame, MatchPlayPlayer } from './types';
 import type { ResultInput } from '@/lib/types';
-import { mapMatchPlayGame } from './roundMapper';
 import { ROUNDS } from '@/lib/bracket/constants';
 
 /**
@@ -26,138 +29,266 @@ export interface MapResultsOutput {
     gameId: number;
     reason: string;
   }>;
-  semiLoserSeeds: number[];
 }
 
 /**
- * Extract winner and loser from a completed Match Play game.
- *
- * @returns Winner and loser player data, or null if cannot determine
+ * Player ID to seed lookup map
  */
-function extractWinnerLoser(
-  players: MatchPlayGamePlayer[] | undefined
-): { winner: MatchPlayGamePlayer; loser: MatchPlayGamePlayer } | null {
-  if (!players || players.length !== 2) return null;
+type SeedMap = Map<number, number>;
 
-  const winner = players.find((p) => p.result === 'win');
-  const loser = players.find((p) => p.result === 'loss');
+/**
+ * Build a playerId → seed lookup map from tournament players.
+ * Seeds are converted from 0-indexed (Match Play) to 1-indexed (our system).
+ */
+export function buildSeedMap(players: MatchPlayPlayer[]): SeedMap {
+  const seedMap = new Map<number, number>();
 
-  if (!winner || !loser) return null;
+  for (const player of players) {
+    const mpSeed = player.tournamentPlayer?.seed;
+    if (mpSeed !== null && mpSeed !== undefined) {
+      // Convert 0-indexed to 1-indexed
+      seedMap.set(player.playerId, mpSeed + 1);
+    }
+  }
 
-  return { winner, loser };
+  return seedMap;
+}
+
+/**
+ * Determine internal round from Match Play game index.
+ *
+ * Standard single-elimination bracket indexing:
+ * - index 1 = Finals
+ * - index 2-3 = Semifinals
+ * - index 4-7 = Quarterfinals
+ * - index 8-15 = Round of 16
+ * - index 16-31 = Round of 32 (Opening round for 24-player)
+ *
+ * Returns null for indices that don't fit standard bracket (consolation games).
+ */
+export function getRoundFromIndex(index: number, playerCount: 16 | 24): number | null {
+  if (index === 1) return ROUNDS.FINALS;
+  if (index >= 2 && index <= 3) return ROUNDS.SEMIS;
+  if (index >= 4 && index <= 7) return ROUNDS.QUARTERS;
+  if (index >= 8 && index <= 15) return ROUNDS.ROUND_OF_16;
+  if (index >= 16 && index <= 31 && playerCount === 24) return ROUNDS.OPENING;
+
+  // Index 0 or other values indicate consolation - handled separately
+  return null;
+}
+
+/**
+ * Get match position within a round from the game index.
+ *
+ * For standard bracket indices:
+ * - Finals (index 1): position 0
+ * - Semis (index 2-3): position 0-1
+ * - Quarters (index 4-7): position 0-3
+ * - R16 (index 8-15): position 0-7
+ * - Opening (index 16-31): position 0-15, but we only use 8 actual matches
+ */
+export function getPositionFromIndex(index: number, round: number): number {
+  switch (round) {
+    case ROUNDS.FINALS:
+      return 0; // Only one finals match
+    case ROUNDS.SEMIS:
+      return index - 2; // index 2 → pos 0, index 3 → pos 1
+    case ROUNDS.QUARTERS:
+      return index - 4; // index 4-7 → pos 0-3
+    case ROUNDS.ROUND_OF_16:
+      return index - 8; // index 8-15 → pos 0-7
+    case ROUNDS.OPENING:
+      return index - 16; // index 16-31 → pos 0-15
+    case ROUNDS.CONSOLATION:
+      return 0; // Only one consolation match
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Check if a game is a valid head-to-head match we should process.
+ */
+function isValidGame(game: MatchPlayGame): boolean {
+  // Skip bye games
+  if (game.bye) return false;
+
+  // Skip non-head-to-head matches (e.g., 4-player 5th-8th consolation)
+  if (game.playerIds.length !== 2) return false;
+
+  // Skip incomplete games
+  if (game.status !== 'completed') return false;
+
+  // Must have result positions
+  if (!game.resultPositions || game.resultPositions.length < 2) return false;
+
+  return true;
+}
+
+/**
+ * Extract winner and loser player IDs from a game.
+ */
+function getWinnerLoser(game: MatchPlayGame): { winnerId: number; loserId: number } | null {
+  if (game.resultPositions.length < 2) return null;
+
+  return {
+    winnerId: game.resultPositions[0],
+    loserId: game.resultPositions[1],
+  };
+}
+
+/**
+ * Find semi-final results to identify winners and losers.
+ * Used to validate Finals and detect Consolation match.
+ */
+function findSemiResults(
+  games: MatchPlayGame[],
+  playerCount: 16 | 24
+): { winners: Set<number>; losers: Set<number> } {
+  const winners = new Set<number>();
+  const losers = new Set<number>();
+
+  for (const game of games) {
+    if (!isValidGame(game)) continue;
+
+    const round = getRoundFromIndex(game.index, playerCount);
+    if (round !== ROUNDS.SEMIS) continue;
+
+    const result = getWinnerLoser(game);
+    if (result) {
+      winners.add(result.winnerId);
+      losers.add(result.loserId);
+    }
+  }
+
+  return { winners, losers };
+}
+
+/**
+ * Check if both players in a game are semi-final losers (consolation match).
+ */
+function isConsolationMatch(playerIds: number[], semiLosers: Set<number>): boolean {
+  if (semiLosers.size !== 2) return false;
+  return playerIds.every((id) => semiLosers.has(id));
+}
+
+/**
+ * Check if both players in a game are semi-final winners (finals match).
+ */
+function isFinalsMatch(playerIds: number[], semiWinners: Set<number>): boolean {
+  if (semiWinners.size !== 2) return false;
+  return playerIds.every((id) => semiWinners.has(id));
 }
 
 /**
  * Map a single Match Play game to our internal result format.
- *
- * @param game The Match Play game to map
- * @param playerCount Tournament player count (16 or 24)
- * @param semiLoserSeeds Seeds of semi-final losers (for consolation detection)
- * @returns Mapped result or null if the game cannot be mapped
  */
-export function mapSingleGame(
+function mapSingleGame(
   game: MatchPlayGame,
   playerCount: 16 | 24,
-  semiLoserSeeds: number[] = []
+  seedMap: SeedMap,
+  semiWinners: Set<number>,
+  semiLosers: Set<number>
 ): MappedResult | { error: string } {
-  // Only process completed games
-  if (game.status !== 'completed') {
-    return { error: 'Game not completed' };
-  }
-
-  // Extract winner and loser
-  const outcome = extractWinnerLoser(game.players);
-  if (!outcome) {
+  // Get winner and loser
+  const result = getWinnerLoser(game);
+  if (!result) {
     return { error: 'Cannot determine winner/loser' };
   }
 
-  const { winner, loser } = outcome;
+  const { winnerId, loserId } = result;
 
-  // Map to internal position
-  const matchPosition = mapMatchPlayGame(
-    game.round,
-    game.gameNumber,
-    winner.seed,
-    loser.seed,
-    playerCount,
-    semiLoserSeeds
-  );
+  // Look up seeds
+  const winnerSeed = seedMap.get(winnerId);
+  const loserSeed = seedMap.get(loserId);
 
-  if (!matchPosition) {
-    return { error: `Cannot map round ${game.round}, game ${game.gameNumber}` };
+  if (!winnerSeed || !loserSeed) {
+    return { error: `Cannot find seed for player ${!winnerSeed ? winnerId : loserId}` };
   }
 
+  // Determine round from index
+  let round = getRoundFromIndex(game.index, playerCount);
+
+  // Handle consolation match (index 0 or unrecognized index)
+  if (round === null) {
+    if (isConsolationMatch(game.playerIds, semiLosers)) {
+      round = ROUNDS.CONSOLATION;
+    } else {
+      return { error: `Unknown game type: index=${game.index}` };
+    }
+  }
+
+  // Validate finals match
+  if (round === ROUNDS.FINALS && !isFinalsMatch(game.playerIds, semiWinners)) {
+    // This might be consolation misidentified, check if it's actually consolation
+    if (isConsolationMatch(game.playerIds, semiLosers)) {
+      round = ROUNDS.CONSOLATION;
+    } else {
+      return { error: 'Finals match players do not match semi-final winners' };
+    }
+  }
+
+  // Get position within round
+  const position = getPositionFromIndex(game.index, round);
+
   return {
-    round: matchPosition.round,
-    match_position: matchPosition.position,
-    winner_seed: winner.seed,
-    loser_seed: loser.seed,
-    winner_games: winner.points || undefined,
-    loser_games: loser.points || undefined,
+    round,
+    match_position: position,
+    winner_seed: winnerSeed,
+    loser_seed: loserSeed,
     matchPlayGameId: game.gameId,
   };
 }
 
 /**
- * Find semi-final losers from a list of games.
- *
- * Needed to correctly identify the consolation (3rd place) match.
- */
-function findSemiLoserSeeds(
-  games: MatchPlayGame[],
-  playerCount: 16 | 24
-): number[] {
-  const semiRoundMp = playerCount === 24 ? 3 : 2; // MP round number for semis
-  const loserSeeds: number[] = [];
-
-  for (const game of games) {
-    if (game.round === semiRoundMp && game.status === 'completed') {
-      const loser = game.players.find((p) => p.result === 'loss');
-      if (loser) {
-        loserSeeds.push(loser.seed);
-      }
-    }
-  }
-
-  return loserSeeds;
-}
-
-/**
  * Map multiple Match Play games to internal results.
  *
- * Processes all completed games and returns successfully mapped results
- * along with information about skipped games.
- *
  * @param games Array of Match Play games
+ * @param players Array of Match Play players (for seed lookup)
  * @param playerCount Tournament player count (16 or 24)
  * @returns Mapped results and skipped game information
  */
 export function mapMatchPlayGames(
   games: MatchPlayGame[],
+  players: MatchPlayPlayer[],
   playerCount: 16 | 24
 ): MapResultsOutput {
-  // First, find semi-final losers for consolation detection
-  const semiLoserSeeds = findSemiLoserSeeds(games, playerCount);
+  // Build seed lookup map
+  const seedMap = buildSeedMap(players);
+
+  // Find semi-final results for Finals/Consolation detection
+  const { winners: semiWinners, losers: semiLosers } = findSemiResults(games, playerCount);
 
   const results: MappedResult[] = [];
   const skipped: Array<{ gameId: number; reason: string }> = [];
   const seenPositions = new Set<string>();
 
-  // Sort games by round and game number to process in order
-  const sortedGames = [...games].sort((a, b) => {
-    if (a.round !== b.round) return a.round - b.round;
-    return a.gameNumber - b.gameNumber;
-  });
+  for (const game of games) {
+    // Filter invalid games
+    if (!isValidGame(game)) {
+      if (game.bye) {
+        // Don't log bye games as skipped - they're expected
+        continue;
+      }
+      skipped.push({
+        gameId: game.gameId,
+        reason: game.playerIds.length !== 2
+          ? `Non-head-to-head match (${game.playerIds.length} players)`
+          : game.status !== 'completed'
+          ? 'Game not completed'
+          : 'Invalid game data',
+      });
+      continue;
+    }
 
-  for (const game of sortedGames) {
-    const result = mapSingleGame(game, playerCount, semiLoserSeeds);
+    const result = mapSingleGame(game, playerCount, seedMap, semiWinners, semiLosers);
 
     if ('error' in result) {
       skipped.push({ gameId: game.gameId, reason: result.error });
       continue;
     }
 
-    // Check for duplicate positions (shouldn't happen, but be safe)
+    // Check for duplicate positions
     const posKey = `${result.round}-${result.match_position}`;
     if (seenPositions.has(posKey)) {
       skipped.push({
@@ -171,15 +302,13 @@ export function mapMatchPlayGames(
     results.push(result);
   }
 
-  return { results, skipped, semiLoserSeeds };
+  return { results, skipped };
 }
 
 /**
  * Count results by round for reporting.
  */
-export function countResultsByRound(
-  results: MappedResult[]
-): Record<number, number> {
+export function countResultsByRound(results: MappedResult[]): Record<number, number> {
   const counts: Record<number, number> = {
     [ROUNDS.OPENING]: 0,
     [ROUNDS.ROUND_OF_16]: 0,

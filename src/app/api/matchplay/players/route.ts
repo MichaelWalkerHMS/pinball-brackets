@@ -55,17 +55,8 @@ export async function GET(request: NextRequest) {
     const client = createMatchPlayClient();
     const tournament = await client.getTournamentWithPlayers(matchplayId);
 
-    // Debug: log raw MP player data
-    console.log("=== Match Play API Response ===");
-    console.log("Total players returned:", tournament.players?.length);
-    console.log("First 3 raw players:", JSON.stringify(tournament.players?.slice(0, 3), null, 2));
-
     // Map Match Play players to our format
     const mappedPlayers = mapMatchPlayPlayers(tournament.players);
-
-    // Debug: log mapped players
-    console.log("Mapped players count:", mappedPlayers.length);
-    console.log("First 3 mapped players:", JSON.stringify(mappedPlayers.slice(0, 3), null, 2));
 
     // If tournamentId provided, fetch existing players and compare
     if (tournamentId) {

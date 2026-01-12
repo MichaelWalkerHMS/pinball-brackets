@@ -122,8 +122,13 @@ export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
         continue;
       }
 
-      // Fetch completed games from Match Play
-      const games = await client.getCompletedGames(tournament.matchplay_id);
+      const matchplayId = String(tournament.matchplay_id);
+
+      // Fetch completed games and players from Match Play
+      const [games, tournamentWithPlayers] = await Promise.all([
+        client.getCompletedGames(matchplayId),
+        client.getTournamentWithPlayers(matchplayId),
+      ]);
 
       if (games.length === 0) {
         results.push(result);
@@ -131,7 +136,11 @@ export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
       }
 
       const playerCount = tournament.player_count;
-      const { results: mappedResults, skipped } = mapMatchPlayGames(games, playerCount);
+      const { results: mappedResults, skipped } = mapMatchPlayGames(
+        games,
+        tournamentWithPlayers.players,
+        playerCount
+      );
 
       result.skipped = skipped.length;
       totalSkipped += skipped.length;

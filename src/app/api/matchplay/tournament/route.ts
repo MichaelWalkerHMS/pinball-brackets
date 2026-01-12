@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     // Map Match Play data to our form format
     // Note: Match Play returns startUtc/endUtc, not startDate/endDate
-    const mpData = tournament as Record<string, unknown>;
+    const mpData = tournament as unknown as Record<string, unknown>;
     const bracketSize = mpData.bracketSize as number | undefined;
     const startUtc = mpData.startUtc as string | null;
 

@@ -12,7 +12,6 @@ export type {
   MatchPlayTournamentWithPlayers,
   MatchPlayPlayer,
   MatchPlayGame,
-  MatchPlayGamePlayer,
   MatchPlayApiResponse,
   MatchPlayApiListResponse,
   MatchPlayApiError,

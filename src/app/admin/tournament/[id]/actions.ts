@@ -623,14 +623,7 @@ export async function importMatchPlayPlayers(
   try {
     const client = createMatchPlayClient();
     const mpTournament = await client.getTournamentWithPlayers(tournament.matchplay_id);
-
-    // Debug: log raw MP data
-    console.log("Raw MP players:", JSON.stringify(mpTournament.players?.slice(0, 3), null, 2));
-
     const validatedPlayers = mapMatchPlayPlayers(mpTournament.players);
-
-    // Debug: log mapped players
-    console.log("Mapped players:", JSON.stringify(validatedPlayers.slice(0, 3), null, 2));
 
     // Verify the submitted data matches what we get from Match Play
     const mpPlayerMap = new Map(validatedPlayers.map((p) => [p.matchplay_id, p]));

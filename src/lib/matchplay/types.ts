@@ -49,26 +49,44 @@ export interface MatchPlayPlayer {
 // Game/Match Types
 // ============================================================================
 
+/**
+ * Match Play game as returned by the API.
+ *
+ * Key fields for result mapping:
+ * - playerIds: Array of player IDs in the game
+ * - resultPositions: Array of player IDs in finishing order [winner, loser]
+ * - resultPoints: Points awarded to each player (aligned with playerIds)
+ * - bye: True if this is a bye game (auto-advance, no opponent)
+ * - index: Bracket position following standard single-elimination indexing:
+ *   - 1 = Finals
+ *   - 2-3 = Semifinals
+ *   - 4-7 = Quarterfinals
+ *   - 8-15 = Round of 16
+ *   - 16-31 = Round of 32 (Opening round for 24-player)
+ *   - 0 = Consolation match (3rd/4th place)
+ */
 export interface MatchPlayGame {
   gameId: number;
   tournamentId: number;
-  round: number;
-  gameNumber: number; // Position within the round
+  roundId: number;
+  index: number; // Bracket position (see docs above)
+  set: number;
   status: 'pending' | 'ready' | 'started' | 'completed';
+  bye: boolean;
+  playerIds: number[];
+  userIds: (number | null)[];
+  resultPositions: number[]; // Player IDs in finishing order [winner, loser, ...]
+  resultPoints: string[]; // Points as strings, aligned with playerIds
+  resultScores: (number | null)[];
   arenaId: number | null;
-  arenaName: string | null;
-  completedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  players: MatchPlayGamePlayer[];
-}
-
-export interface MatchPlayGamePlayer {
-  playerId: number;
-  seed: number;
-  points: number;
-  result: 'win' | 'loss' | null;
-  position: number; // Finishing position (1 = winner, 2 = loser for head-to-head)
+  bankId: number | null;
+  challengeId: number | null;
+  playerIdAdvantage: number | null;
+  scorekeeperId: number | null;
+  startedAt: string | null;
+  duration: number | null;
+  resultCountMismatch: boolean;
+  suggestions: unknown[];
 }
 
 // ============================================================================

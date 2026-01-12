@@ -43,9 +43,11 @@ See `coding-standards.md` for established code patterns and conventions. All cod
 
 **CRITICAL: All code must pass automated review before being pushed to GitHub.**
 
+**NEVER run `git push` until you have received `APPROVED` from the code review agent.**
+
 **Exception:** Changes that ONLY modify `.md` files do not require code review.
 
-**Before EVERY push:**
+**Review loop (must complete before ANY push):**
 
 1. Invoke the review subagent:
    ```
@@ -54,13 +56,15 @@ See `coding-standards.md` for established code patterns and conventions. All cod
    ```
 
 2. Handle the response:
-   - `CHANGES_REQUESTED` → Fix issues medium or higher, amend commit, re-invoke review
-   - `APPROVED` → Push to GitHub and open the PR
+   - `APPROVED` → You may now push to GitHub and open the PR
+   - `CHANGES_REQUESTED` → Fix blocking issues, amend commit, **return to step 1**
    - `ESCALATE_TO_HUMAN` → Stop and notify user
 
-3. Maximum 5 review iterations. If unresolved, escalate.
+3. **You MUST loop through steps 1-2 until you receive `APPROVED`.** Do not push after fixing issues without re-running the review.
 
-4. **Log deferred findings:** Non-blocking suggestions you choose NOT to fix go in `future-improvements.md`. But prefer fixing issues while context is fresh.
+4. Maximum 5 review iterations. If unresolved, escalate.
+
+5. **Log deferred findings:** Non-blocking suggestions you choose NOT to fix go in `future-improvements.md`. But prefer fixing issues while context is fresh.
 
 **Never push code that hasn't been approved by the review subagent.**
 

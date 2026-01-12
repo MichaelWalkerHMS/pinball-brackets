@@ -8,6 +8,62 @@ import {
 } from './types';
 
 /**
+ * Result type for safeMatchPlayCall wrapper
+ */
+export type SafeMatchPlayResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; status: number };
+
+/**
+ * Wrapper for Match Play API calls with standardized error handling.
+ *
+ * Provides consistent error handling across all Match Play API routes:
+ * - Logs errors with context for debugging
+ * - Handles MatchPlayError with appropriate status codes
+ * - Falls back to 502 Bad Gateway for unexpected errors
+ *
+ * @param fn - Async function that calls Match Play API
+ * @param actionName - Description of the action for error messages (e.g., "fetch games")
+ * @returns Object with either { success: true, data } or { success: false, error, status }
+ *
+ * @example
+ * const result = await safeMatchPlayCall(
+ *   () => client.getCompletedGames(matchplayId),
+ *   'fetch games'
+ * );
+ * if (!result.success) {
+ *   return NextResponse.json({ error: result.error }, { status: result.status });
+ * }
+ * const games = result.data;
+ */
+export async function safeMatchPlayCall<T>(
+  fn: () => Promise<T>,
+  actionName: string
+): Promise<SafeMatchPlayResult<T>> {
+  try {
+    const data = await fn();
+    return { success: true, data };
+  } catch (err) {
+    console.error(`[Match Play] ${actionName} failed:`, err);
+
+    if (err instanceof MatchPlayError) {
+      return {
+        success: false,
+        error: err.message,
+        status: err.status,
+      };
+    }
+
+    // Generic fallback for unexpected errors
+    return {
+      success: false,
+      error: `Failed to ${actionName} from Match Play`,
+      status: 502,
+    };
+  }
+}
+
+/**
  * Match Play Events API Client
  *
  * Provides methods to interact with the Match Play Events API for:

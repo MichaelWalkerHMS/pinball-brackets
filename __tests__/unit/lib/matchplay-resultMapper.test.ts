@@ -367,4 +367,161 @@ describe('resultMapper', () => {
       expect(counts[ROUNDS.FINALS]).toBe(0);
     });
   });
+
+  describe('per-game tracking support', () => {
+    it('maps games using resultPoints when resultPositions are null', () => {
+      const players = createMockPlayers();
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 8, // Round of 16, position 0
+          playerIds: [1001, 1016], // Seed 1 vs Seed 16
+          resultPositions: [null as unknown as number, null as unknown as number], // Null positions (per-game tracking)
+          resultPoints: ['4.00', '0.00'], // Seed 1 won 4 games, Seed 16 won 0
+        }),
+      ];
+
+      const { results, skipped } = mapMatchPlayGames(games, players, 16);
+
+      expect(results).toHaveLength(1);
+      expect(skipped).toHaveLength(0);
+      expect(results[0].round).toBe(ROUNDS.ROUND_OF_16);
+      expect(results[0].match_position).toBe(0);
+      expect(results[0].winner_seed).toBe(1);
+      expect(results[0].loser_seed).toBe(16);
+      expect(results[0].winner_games).toBe(4);
+      expect(results[0].loser_games).toBe(0);
+    });
+
+    it('correctly identifies winner when player2 has more points', () => {
+      const players = createMockPlayers();
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 8,
+          playerIds: [1001, 1016], // Seed 1 vs Seed 16
+          resultPositions: [null as unknown as number, null as unknown as number],
+          resultPoints: ['2.00', '4.00'], // Seed 16 won (upset!)
+        }),
+      ];
+
+      const { results } = mapMatchPlayGames(games, players, 16);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].winner_seed).toBe(16); // Upset
+      expect(results[0].loser_seed).toBe(1);
+      expect(results[0].winner_games).toBe(4);
+      expect(results[0].loser_games).toBe(2);
+    });
+
+    it('extracts game counts from resultPoints when resultPositions are valid', () => {
+      const players = createMockPlayers();
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 8,
+          playerIds: [1001, 1016],
+          resultPositions: [1001, 1016], // Standard format with valid positions
+          resultPoints: ['4.00', '3.00'], // Best of 7 where seed 1 won 4-3
+        }),
+      ];
+
+      const { results } = mapMatchPlayGames(games, players, 16);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].winner_seed).toBe(1);
+      expect(results[0].loser_seed).toBe(16);
+      expect(results[0].winner_games).toBe(4);
+      expect(results[0].loser_games).toBe(3);
+    });
+
+    it('skips games with tied points (incomplete match)', () => {
+      const players = createMockPlayers();
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 8,
+          playerIds: [1001, 1016],
+          resultPositions: [null as unknown as number, null as unknown as number],
+          resultPoints: ['2.00', '2.00'], // Tied, no winner yet
+        }),
+      ];
+
+      const { results, skipped } = mapMatchPlayGames(games, players, 16);
+
+      expect(results).toHaveLength(0);
+      expect(skipped).toHaveLength(1);
+      expect(skipped[0].reason).toContain('tied');
+    });
+
+    it('skips incomplete games even with partial per-game results', () => {
+      const players = createMockPlayers();
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 8,
+          status: 'started', // Not completed
+          playerIds: [1001, 1016],
+          resultPositions: [null as unknown as number, null as unknown as number],
+          resultPoints: ['3.00', '1.00'], // Partial results
+        }),
+      ];
+
+      const { results, skipped } = mapMatchPlayGames(games, players, 16);
+
+      expect(results).toHaveLength(0);
+      expect(skipped).toHaveLength(1);
+      expect(skipped[0].reason).toBe('Game not completed');
+    });
+
+    it('handles 16-player tournament Round of 16 correctly', () => {
+      const players = createMockPlayers().slice(0, 16); // Only 16 players
+      const games: MatchPlayGame[] = [
+        // All 8 Round of 16 matches
+        createMockGame({
+          gameId: 1001,
+          index: 8,
+          playerIds: [1001, 1016],
+          resultPositions: [null as unknown as number, null as unknown as number],
+          resultPoints: ['4.00', '0.00'],
+        }),
+        createMockGame({
+          gameId: 1002,
+          index: 9,
+          playerIds: [1008, 1009],
+          resultPositions: [null as unknown as number, null as unknown as number],
+          resultPoints: ['4.00', '2.00'],
+        }),
+      ];
+
+      const { results, skipped } = mapMatchPlayGames(games, players, 16);
+
+      expect(results).toHaveLength(2);
+      expect(skipped).toHaveLength(0);
+
+      // Verify correct positions
+      expect(results[0].round).toBe(ROUNDS.ROUND_OF_16);
+      expect(results[0].match_position).toBe(0); // index 8 -> position 0
+      expect(results[1].match_position).toBe(1); // index 9 -> position 1
+    });
+
+    it('handles missing resultPoints gracefully', () => {
+      const players = createMockPlayers();
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 8,
+          playerIds: [1001, 1016],
+          resultPositions: [null as unknown as number, null as unknown as number],
+          resultPoints: [], // Empty - invalid
+        }),
+      ];
+
+      const { results, skipped } = mapMatchPlayGames(games, players, 16);
+
+      expect(results).toHaveLength(0);
+      expect(skipped).toHaveLength(1);
+      expect(skipped[0].reason).toContain('Missing result data');
+    });
+  });
 });

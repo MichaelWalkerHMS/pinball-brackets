@@ -28,3 +28,13 @@ export {
   hasDiffChanges,
 } from './playerMapper';
 export type { MappedPlayer, PlayerDiff } from './playerMapper';
+
+export {
+  mapMatchPlayGames,
+  countResultsByRound,
+  buildSeedMap,
+  getRoundFromIndex,
+  getPositionFromIndex,
+  getOpeningRoundPosition,
+} from './resultMapper';
+export type { MappedResult, MapResultsOutput } from './resultMapper';

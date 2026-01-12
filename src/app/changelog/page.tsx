@@ -19,6 +19,13 @@ export default function ChangelogPage() {
         <h1 className="text-3xl font-bold mb-6">Changelog</h1>
 
         <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-3">1.0.1</h2>
+          <ul className="list-disc list-inside text-[rgb(var(--color-text-secondary))] space-y-1">
+            <li>Implemented initial services for calling Match Play API to build tournaments and import results</li>
+          </ul>
+        </section>
+
+        <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3">1.0</h2>
           <ul className="list-disc list-inside text-[rgb(var(--color-text-secondary))] space-y-1">
             <li>Initial launch with Michigan Open and Women&apos;s brackets</li>

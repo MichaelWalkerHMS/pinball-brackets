@@ -3,6 +3,7 @@ import {
   buildSeedMap,
   getRoundFromIndex,
   getPositionFromIndex,
+  getOpeningRoundPosition,
   mapMatchPlayGames,
   countResultsByRound,
 } from '@/lib/matchplay/resultMapper';
@@ -119,7 +120,7 @@ describe('resultMapper', () => {
   });
 
   describe('getPositionFromIndex', () => {
-    it('returns correct positions for each round', () => {
+    it('returns correct positions for each round (except Opening)', () => {
       expect(getPositionFromIndex(1, ROUNDS.FINALS)).toBe(0);
       expect(getPositionFromIndex(2, ROUNDS.SEMIS)).toBe(0);
       expect(getPositionFromIndex(3, ROUNDS.SEMIS)).toBe(1);
@@ -127,8 +128,35 @@ describe('resultMapper', () => {
       expect(getPositionFromIndex(7, ROUNDS.QUARTERS)).toBe(3);
       expect(getPositionFromIndex(8, ROUNDS.ROUND_OF_16)).toBe(0);
       expect(getPositionFromIndex(15, ROUNDS.ROUND_OF_16)).toBe(7);
-      expect(getPositionFromIndex(16, ROUNDS.OPENING)).toBe(0);
-      expect(getPositionFromIndex(23, ROUNDS.OPENING)).toBe(7);
+      // Note: Opening Round uses getOpeningRoundPosition() instead
+    });
+  });
+
+  describe('getOpeningRoundPosition', () => {
+    it('returns correct position for each opening round matchup', () => {
+      // Position 0: 9 vs 24
+      expect(getOpeningRoundPosition(9, 24)).toBe(0);
+      expect(getOpeningRoundPosition(24, 9)).toBe(0); // Order doesn't matter
+      // Position 1: 10 vs 23
+      expect(getOpeningRoundPosition(10, 23)).toBe(1);
+      // Position 2: 11 vs 22
+      expect(getOpeningRoundPosition(11, 22)).toBe(2);
+      // Position 3: 12 vs 21
+      expect(getOpeningRoundPosition(12, 21)).toBe(3);
+      // Position 4: 13 vs 20
+      expect(getOpeningRoundPosition(13, 20)).toBe(4);
+      // Position 5: 14 vs 19
+      expect(getOpeningRoundPosition(14, 19)).toBe(5);
+      // Position 6: 15 vs 18
+      expect(getOpeningRoundPosition(15, 18)).toBe(6);
+      // Position 7: 16 vs 17
+      expect(getOpeningRoundPosition(16, 17)).toBe(7);
+    });
+
+    it('returns -1 for invalid seed combinations', () => {
+      expect(getOpeningRoundPosition(1, 2)).toBe(-1); // Bye seeds
+      expect(getOpeningRoundPosition(9, 23)).toBe(-1); // Wrong pairing
+      expect(getOpeningRoundPosition(10, 24)).toBe(-1); // Wrong pairing
     });
   });
 
@@ -138,7 +166,7 @@ describe('resultMapper', () => {
       const games: MatchPlayGame[] = [
         createMockGame({
           gameId: 1001,
-          index: 17, // Opening round position
+          index: 17, // Match Play uses various indices for opening round
           playerIds: [1009, 1024], // Seed 9 vs Seed 24
           resultPositions: [1009, 1024], // Seed 9 wins
         }),
@@ -149,8 +177,45 @@ describe('resultMapper', () => {
       expect(results).toHaveLength(1);
       expect(skipped).toHaveLength(0);
       expect(results[0].round).toBe(ROUNDS.OPENING);
+      expect(results[0].match_position).toBe(0); // 9v24 is position 0
       expect(results[0].winner_seed).toBe(9);
       expect(results[0].loser_seed).toBe(24);
+    });
+
+    it('maps opening round games with non-contiguous indices correctly', () => {
+      const players = createMockPlayers();
+      // Test with indices that would fail with simple index-based calculation
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 25, // Would be position 9 with index-16, but should map to position 5 (14v19)
+          playerIds: [1014, 1019], // Seed 14 vs Seed 19
+          resultPositions: [1014, 1019], // Seed 14 wins
+        }),
+        createMockGame({
+          gameId: 1002,
+          index: 30, // Would be position 14 with index-16, but should map to position 6 (15v18)
+          playerIds: [1015, 1018], // Seed 15 vs Seed 18
+          resultPositions: [1018, 1015], // Seed 18 wins (upset)
+        }),
+      ];
+
+      const { results, skipped } = mapMatchPlayGames(games, players, 24);
+
+      expect(results).toHaveLength(2);
+      expect(skipped).toHaveLength(0);
+
+      const result1 = results.find(r => r.matchPlayGameId === 1001);
+      expect(result1?.round).toBe(ROUNDS.OPENING);
+      expect(result1?.match_position).toBe(5); // 14v19 is position 5
+      expect(result1?.winner_seed).toBe(14);
+      expect(result1?.loser_seed).toBe(19);
+
+      const result2 = results.find(r => r.matchPlayGameId === 1002);
+      expect(result2?.round).toBe(ROUNDS.OPENING);
+      expect(result2?.match_position).toBe(6); // 15v18 is position 6
+      expect(result2?.winner_seed).toBe(18); // Upset winner
+      expect(result2?.loser_seed).toBe(15);
     });
 
     it('skips bye games', () => {

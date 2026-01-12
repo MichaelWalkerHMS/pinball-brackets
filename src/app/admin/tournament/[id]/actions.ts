@@ -528,6 +528,40 @@ export async function deleteResult(
 }
 
 /**
+ * Clear ALL results for a tournament
+ */
+export async function clearAllResults(tournamentId: string) {
+  const auth = await requireAdmin();
+  if ("error" in auth) {
+    return { error: auth.error };
+  }
+
+  const supabase = await createClient();
+
+  // Get count before deleting for feedback
+  const { count } = await supabase
+    .from("results")
+    .select("*", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId);
+
+  const { error } = await supabase
+    .from("results")
+    .delete()
+    .eq("tournament_id", tournamentId);
+
+  if (error) {
+    console.error("Error clearing all results:", error);
+    return { error: "Failed to clear results" };
+  }
+
+  // Recalculate scores (will reset all scores to 0)
+  await recalculateScores(tournamentId);
+
+  revalidatePath(`/admin/tournament/${tournamentId}`);
+  return { success: true, count: count || 0 };
+}
+
+/**
  * Clear all results for rounds after a specific round
  * (Used when changing an earlier result that invalidates later rounds)
  */

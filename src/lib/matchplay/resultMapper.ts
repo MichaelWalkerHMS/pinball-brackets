@@ -11,7 +11,7 @@
 
 import type { MatchPlayGame, MatchPlayPlayer } from './types';
 import type { ResultInput } from '@/lib/types';
-import { ROUNDS } from '@/lib/bracket/constants';
+import { ROUNDS, OPENING_ROUND_MATCHES } from '@/lib/bracket/constants';
 
 /**
  * Mapped result ready for database insertion
@@ -85,7 +85,7 @@ export function getRoundFromIndex(index: number, playerCount: 16 | 24): number |
  * - Semis (index 2-3): position 0-1
  * - Quarters (index 4-7): position 0-3
  * - R16 (index 8-15): position 0-7
- * - Opening (index 16-31): position 0-15, but we only use 8 actual matches
+ * - Opening: use getOpeningRoundPosition() instead (index-based doesn't work)
  */
 export function getPositionFromIndex(index: number, round: number): number {
   switch (round) {
@@ -97,13 +97,31 @@ export function getPositionFromIndex(index: number, round: number): number {
       return index - 4; // index 4-7 → pos 0-3
     case ROUNDS.ROUND_OF_16:
       return index - 8; // index 8-15 → pos 0-7
-    case ROUNDS.OPENING:
-      return index - 16; // index 16-31 → pos 0-15
     case ROUNDS.CONSOLATION:
       return 0; // Only one consolation match
     default:
       return 0;
   }
+}
+
+/**
+ * Get Opening Round position from the seeds playing in a match.
+ *
+ * Match Play uses non-contiguous indices (17, 18, 21, 22, 25, 26, 29, 30)
+ * for opening round in a 32-bracket, so we determine position by which
+ * seeds are playing rather than from the index.
+ *
+ * @returns Position 0-7 if found, -1 if seeds don't match any opening match
+ */
+export function getOpeningRoundPosition(seed1: number, seed2: number): number {
+  // Find the opening round match that contains both seeds
+  for (const match of OPENING_ROUND_MATCHES) {
+    const seeds = [match.topSeed, match.bottomSeed];
+    if (seeds.includes(seed1) && seeds.includes(seed2)) {
+      return match.position;
+    }
+  }
+  return -1; // Not found
 }
 
 /**
@@ -229,7 +247,16 @@ function mapSingleGame(
   }
 
   // Get position within round
-  const position = getPositionFromIndex(game.index, round);
+  let position: number;
+  if (round === ROUNDS.OPENING) {
+    // For Opening Round, determine position from seeds (index-based doesn't work)
+    position = getOpeningRoundPosition(winnerSeed, loserSeed);
+    if (position === -1) {
+      return { error: `Opening round seeds ${winnerSeed} vs ${loserSeed} don't match expected pairings` };
+    }
+  } else {
+    position = getPositionFromIndex(game.index, round);
+  }
 
   return {
     round,

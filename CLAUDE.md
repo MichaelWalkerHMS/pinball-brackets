@@ -72,7 +72,27 @@ Bracket prediction app for IFPA pinball tournaments.
 
 3. Maximum 5 review iterations. If you can't resolve issues after 5 cycles, escalate.
 
+4. **Log non-blocking findings:** After approval, any non-blocking suggestions (LOW severity, or MEDIUM/HIGH that were explicitly deferred) must be added to `future-improvements.md` following its format guide. This ensures good suggestions aren't lost.
+
 **Never push code that hasn't been approved by the review subagent. No exceptions.**
+
+### Future Improvements Tracking
+
+Non-blocking code review findings, technical debt, and improvement ideas are tracked in `future-improvements.md`. This file:
+- Uses a structured format with enough context for future Claude sessions to implement fixes
+- Includes severity levels (CRITICAL, HIGH, MEDIUM, LOW)
+- Contains code snippets, file paths, and suggested fixes
+- Has a "Completed Items" section for tracking what's been addressed
+
+**When to add entries:**
+- Non-blocking findings from code review (after PR is approved)
+- Technical debt identified during development
+- Ideas for improvement that aren't in scope for current work
+
+**When reviewing `future-improvements.md`:**
+- Check for CRITICAL/HIGH items that should be prioritized
+- Look for quick wins (LOW items that can be fixed in minutes)
+- Consider bundling related improvements into a single PR
 
 ### Code changes
 Feature branch → PR → Preview deployment (dev DB) → User reviews → Merge to main

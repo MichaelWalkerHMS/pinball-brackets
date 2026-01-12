@@ -94,7 +94,25 @@ export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
     });
   }
 
-  const client = createMatchPlayClient();
+  // Create Match Play client - fail fast if token is missing
+  let client;
+  try {
+    client = createMatchPlayClient();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to initialize Match Play client';
+    console.error('[Match Play] Client initialization failed:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        tournaments: [],
+        totalImported: 0,
+        totalSkipped: 0,
+        error: message,
+      },
+      { status: 500 }
+    );
+  }
+
   const results: TournamentSyncResult[] = [];
   let totalImported = 0;
   let totalSkipped = 0;

@@ -103,13 +103,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<SyncResul
   const playerCount = tournament.player_count;
   const matchplayId = String(tournament.matchplay_id);
 
-  // Fetch completed games and players from Match Play
-  const client = createMatchPlayClient();
-
-  // Fetch games and players in parallel with standardized error handling
+  // Fetch completed games and players from Match Play with standardized error handling
+  // Note: Client is created inside lambdas so constructor errors are caught by the wrapper
   const [gamesResult, playersResult] = await Promise.all([
-    safeMatchPlayCall(() => client.getCompletedGames(matchplayId), 'fetch games'),
-    safeMatchPlayCall(() => client.getTournamentWithPlayers(matchplayId), 'fetch players'),
+    safeMatchPlayCall(() => createMatchPlayClient().getCompletedGames(matchplayId), 'fetch games'),
+    safeMatchPlayCall(() => createMatchPlayClient().getTournamentWithPlayers(matchplayId), 'fetch players'),
   ]);
 
   if (!gamesResult.success) {

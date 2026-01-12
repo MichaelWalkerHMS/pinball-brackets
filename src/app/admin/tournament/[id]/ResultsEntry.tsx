@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { Tournament, Player, Result } from "@/lib/types";
 import {
   ROUNDS,
@@ -15,7 +16,7 @@ import {
   CONSOLATION_MATCH,
   getPickKey,
 } from "@/lib/bracket/constants";
-import { saveResult, deleteResult, clearDownstreamResults } from "./actions";
+import { saveResult, deleteResult, clearDownstreamResults, clearAllResults } from "./actions";
 
 interface ResultsEntryProps {
   tournament: Tournament;
@@ -23,11 +24,18 @@ interface ResultsEntryProps {
   results: Result[];
 }
 
+interface SyncResult {
+  imported: number;
+  skipped: number;
+  byRound: Record<string, number>;
+}
+
 export default function ResultsEntry({
   tournament,
   players,
   results: initialResults,
 }: ResultsEntryProps) {
+  const router = useRouter();
   const [results, setResults] = useState(initialResults);
   // Default to first available round (OPENING for 24-player, R16 for 16-player)
   const [activeRound, setActiveRound] = useState<number>(
@@ -35,6 +43,74 @@ export default function ResultsEntry({
   );
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  const hasMatchPlayId = !!tournament.matchplay_id;
+  const hasResults = results.length > 0;
+
+  async function handleSyncFromMatchPlay() {
+    if (!hasMatchPlayId || syncing) return;
+
+    setSyncing(true);
+    setError(null);
+    setSyncResult(null);
+
+    try {
+      const response = await fetch('/api/matchplay/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: tournament.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to sync results');
+      } else {
+        setSyncResult({
+          imported: data.imported,
+          skipped: data.skipped,
+          byRound: data.byRound,
+        });
+        // Full page reload to show updated results
+        window.location.reload();
+      }
+    } catch {
+      setError('Failed to connect to server');
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleClearAllResults() {
+    if (clearing || !hasResults) return;
+
+    const confirmed = confirm(
+      `Are you sure you want to clear all ${results.length} results? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setClearing(true);
+    setError(null);
+
+    try {
+      const result = await clearAllResults(tournament.id);
+
+      if (result.error) {
+        setError(result.error);
+      } else {
+        // Clear local state
+        setResults([]);
+        router.refresh();
+      }
+    } catch {
+      setError('Failed to clear results');
+    } finally {
+      setClearing(false);
+    }
+  }
 
   // Create a map for quick player lookup
   const playerMap = useMemo(() => {
@@ -299,6 +375,77 @@ export default function ResultsEntry({
 
   return (
     <div className="space-y-6">
+      {/* Match Play Sync & Clear All */}
+      <div className="flex items-center gap-4 p-4 bg-[rgb(var(--color-bg-secondary))] rounded-lg border border-[rgb(var(--color-border-primary))]">
+        <div className="flex-1">
+          {hasMatchPlayId ? (
+            <>
+              <p className="text-sm text-[rgb(var(--color-text-secondary))]">
+                Sync results from Match Play Events
+              </p>
+              {syncResult && (
+                <p className="text-sm text-[rgb(var(--color-success-text))] mt-1">
+                  Imported {syncResult.imported} result{syncResult.imported !== 1 ? 's' : ''}
+                  {syncResult.skipped > 0 && ` (${syncResult.skipped} skipped)`}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-[rgb(var(--color-text-secondary))]">
+              Results management
+            </p>
+          )}
+        </div>
+        {hasMatchPlayId && (
+          <button
+            onClick={handleSyncFromMatchPlay}
+            disabled={syncing}
+            className="px-4 py-2 bg-[rgb(var(--color-accent-primary))] text-white rounded-lg hover:bg-[rgb(var(--color-accent-hover))] font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {syncing ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Syncing...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Sync from Match Play
+              </>
+            )}
+          </button>
+        )}
+        {hasResults && (
+          <button
+            onClick={handleClearAllResults}
+            disabled={clearing}
+            className="px-4 py-2 bg-[rgb(var(--color-error-bg))] text-[rgb(var(--color-error-text))] rounded-lg hover:bg-[rgb(var(--color-error-bg-light))] font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-[rgb(var(--color-error-border))]"
+          >
+            {clearing ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Clearing...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear All Results
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
       {/* Round selector */}
       <div className="flex flex-wrap gap-2">
         {rounds.map((round) => {

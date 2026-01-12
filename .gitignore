@@ -54,6 +54,7 @@ mobile-pr*.md
 code-review-agent.md
 pr-review-comments.md
 ui-implementation-guidelines.md.md
+future-improvements.md
 
 # Playwright
 test-results/

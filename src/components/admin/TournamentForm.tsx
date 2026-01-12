@@ -49,6 +49,7 @@ export default function TournamentForm({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingFromMP, setIsFetchingFromMP] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function formatDateTimeLocal(isoString: string): string {
@@ -60,6 +61,50 @@ export default function TournamentForm({
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
     return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  async function handleFetchFromMatchPlay() {
+    if (!formData.matchplay_id) {
+      setError("Please enter a Match Play ID first");
+      return;
+    }
+
+    setIsFetchingFromMP(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/matchplay/tournament?id=${encodeURIComponent(formData.matchplay_id)}`
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "Failed to fetch from Match Play");
+        return;
+      }
+
+      // Pre-fill form with fetched data
+      const mpData = result.data;
+
+      // Show warning if player count is not 16 or 24
+      if (mpData.player_count_warning) {
+        setError(mpData.player_count_warning);
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        name: mpData.name || prev.name,
+        start_date: mpData.start_date ? formatDateTimeLocal(mpData.start_date) : prev.start_date,
+        end_date: mpData.end_date ? formatDateTimeLocal(mpData.end_date) : prev.end_date,
+        // Auto-set player count if Match Play returns 16 or 24
+        player_count: mpData.player_count || prev.player_count,
+      }));
+    } catch (err) {
+      console.error("Error fetching from Match Play:", err);
+      setError("Failed to connect to Match Play");
+    } finally {
+      setIsFetchingFromMP(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -275,16 +320,29 @@ export default function TournamentForm({
           MatchPlay ID{" "}
           <span className="text-[rgb(var(--color-text-muted))] font-normal">(optional)</span>
         </label>
-        <input
-          type="text"
-          id="matchplay_id"
-          value={formData.matchplay_id}
-          onChange={(e) =>
-            setFormData({ ...formData, matchplay_id: e.target.value })
-          }
-          className="w-full px-3 py-2 border border-[rgb(var(--color-border-secondary))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))]"
-          placeholder="e.g., 12345"
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            id="matchplay_id"
+            value={formData.matchplay_id}
+            onChange={(e) =>
+              setFormData({ ...formData, matchplay_id: e.target.value })
+            }
+            className="flex-1 px-3 py-2 border border-[rgb(var(--color-border-secondary))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))]"
+            placeholder="e.g., 12345"
+          />
+          <button
+            type="button"
+            onClick={handleFetchFromMatchPlay}
+            disabled={isFetchingFromMP || !formData.matchplay_id}
+            className="px-3 py-2 bg-[rgb(var(--color-bg-tertiary))] text-[rgb(var(--color-text-secondary))] rounded-lg hover:bg-[rgb(var(--color-border-secondary))] font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {isFetchingFromMP ? "Fetching..." : "Fetch from MP"}
+          </button>
+        </div>
+        <p className="text-xs text-[rgb(var(--color-text-muted))] mt-1">
+          Enter the Match Play tournament ID to auto-fill name and dates
+        </p>
       </div>
 
       {/* Actions */}

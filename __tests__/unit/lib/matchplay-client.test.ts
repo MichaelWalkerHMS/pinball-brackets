@@ -21,46 +21,81 @@ const mockTournament = {
   updatedAt: '2026-01-10T00:00:00Z',
 };
 
-// Mock players
+// Mock players (matching actual API structure)
 const mockPlayers = [
-  { playerId: 1001, name: 'Player One', seed: 1, status: 'active', ifpaId: 10001, claimedBy: null },
-  { playerId: 1002, name: 'Player Two', seed: 2, status: 'active', ifpaId: 10002, claimedBy: null },
-  { playerId: 1003, name: 'Player Three', seed: 3, status: 'active', ifpaId: null, claimedBy: null },
+  {
+    playerId: 1001,
+    name: 'Player One',
+    status: 'active',
+    ifpaId: 10001,
+    claimedBy: null,
+    tournamentPlayer: { status: 'active', seed: 0, pointsAdjustment: 0 },
+  },
+  {
+    playerId: 1002,
+    name: 'Player Two',
+    status: 'active',
+    ifpaId: 10002,
+    claimedBy: null,
+    tournamentPlayer: { status: 'active', seed: 1, pointsAdjustment: 0 },
+  },
+  {
+    playerId: 1003,
+    name: 'Player Three',
+    status: 'active',
+    ifpaId: null,
+    claimedBy: null,
+    tournamentPlayer: { status: 'active', seed: 2, pointsAdjustment: 0 },
+  },
 ];
 
-// Mock games
+// Mock games (matching actual API structure)
 const mockGames = [
   {
     gameId: 5001,
     tournamentId: 12345,
-    round: 0,
-    gameNumber: 0,
+    roundId: 100001,
+    index: 17,
+    set: 0,
     status: 'completed',
+    bye: false,
+    playerIds: [1016, 1017],
+    userIds: [null, null],
+    resultPositions: [1016, 1017],
+    resultPoints: ['1.00', '0.00'],
+    resultScores: [null, null],
     arenaId: 1,
-    arenaName: 'Arena 1',
-    completedAt: '2026-01-17T14:00:00Z',
-    createdAt: '2026-01-17T12:00:00Z',
-    updatedAt: '2026-01-17T14:00:00Z',
-    players: [
-      { playerId: 1016, seed: 16, points: 3, result: 'win', position: 1 },
-      { playerId: 1017, seed: 17, points: 1, result: 'loss', position: 2 },
-    ],
+    bankId: null,
+    challengeId: null,
+    playerIdAdvantage: null,
+    scorekeeperId: null,
+    startedAt: '2026-01-17T14:00:00Z',
+    duration: 600,
+    resultCountMismatch: false,
+    suggestions: [],
   },
   {
     gameId: 5002,
     tournamentId: 12345,
-    round: 0,
-    gameNumber: 1,
+    roundId: 100001,
+    index: 18,
+    set: 0,
     status: 'completed',
+    bye: false,
+    playerIds: [1009, 1024],
+    userIds: [null, null],
+    resultPositions: [1009, 1024],
+    resultPoints: ['1.00', '0.00'],
+    resultScores: [null, null],
     arenaId: 2,
-    arenaName: 'Arena 2',
-    completedAt: '2026-01-17T14:30:00Z',
-    createdAt: '2026-01-17T12:00:00Z',
-    updatedAt: '2026-01-17T14:30:00Z',
-    players: [
-      { playerId: 1009, seed: 9, points: 3, result: 'win', position: 1 },
-      { playerId: 1024, seed: 24, points: 0, result: 'loss', position: 2 },
-    ],
+    bankId: null,
+    challengeId: null,
+    playerIdAdvantage: null,
+    scorekeeperId: null,
+    startedAt: '2026-01-17T14:30:00Z',
+    duration: 900,
+    resultCountMismatch: false,
+    suggestions: [],
   },
 ];
 
@@ -155,7 +190,7 @@ describe('MatchPlayClient', () => {
       expect(tournament.tournamentId).toBe(12345);
       expect(tournament.players).toHaveLength(3);
       expect(tournament.players[0].name).toBe('Player One');
-      expect(tournament.players[0].seed).toBe(1);
+      expect(tournament.players[0].tournamentPlayer?.seed).toBe(0);
     });
   });
 
@@ -172,7 +207,7 @@ describe('MatchPlayClient', () => {
 
       expect(games).toHaveLength(2);
       expect(games[0].gameId).toBe(5001);
-      expect(games[0].players).toHaveLength(2);
+      expect(games[0].playerIds).toHaveLength(2);
     });
 
     it('fetches completed games with status filter', async () => {

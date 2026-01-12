@@ -19,16 +19,20 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Tournament, Player } from "@/lib/types";
-import { reorderPlayers, deletePlayer, addPlayer, updatePlayerName } from "./actions";
+import type { PlayerDiff, MappedPlayer } from "@/lib/matchplay";
+import { reorderPlayers, deletePlayer, addPlayer, updatePlayerName, importMatchPlayPlayers } from "./actions";
+import MatchPlayDiff from "./MatchPlayDiff";
 
 interface PlayerManagementProps {
   tournament: Tournament;
   players: Player[];
+  bracketCount?: number;
 }
 
 export default function PlayerManagement({
   tournament,
   players: initialPlayers,
+  bracketCount = 0,
 }: PlayerManagementProps) {
   const [showBulkImport, setShowBulkImport] = useState(
     initialPlayers.length === 0
@@ -46,6 +50,13 @@ export default function PlayerManagement({
   // Add player state
   const [newPlayerName, setNewPlayerName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+
+  // Match Play import state
+  const [isFetchingMP, setIsFetchingMP] = useState(false);
+  const [mpPlayers, setMpPlayers] = useState<MappedPlayer[] | null>(null);
+  const [mpDiff, setMpDiff] = useState<PlayerDiff | null>(null);
+  const [showMpDiff, setShowMpDiff] = useState(false);
+  const [isApplyingMP, setIsApplyingMP] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -154,8 +165,105 @@ export default function PlayerManagement({
     }
   }
 
+  // Match Play import handler
+  async function handleFetchFromMatchPlay() {
+    if (!tournament.matchplay_id) return;
+
+    setIsFetchingMP(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams({
+        matchplayId: tournament.matchplay_id,
+        tournamentId: tournament.id,
+      });
+      const response = await fetch(`/api/matchplay/players?${params}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "Failed to fetch from Match Play");
+        return;
+      }
+
+      setMpPlayers(result.players);
+
+      // If there are changes and existing players have MP IDs, show diff modal
+      if (result.hasChanges && result.diff) {
+        setMpDiff(result.diff);
+        setShowMpDiff(true);
+      } else if (result.existingCount === 0 || !result.hasChanges) {
+        // Fresh import or no changes - proceed directly
+        if (result.players.length === 0) {
+          setError("No players found in Match Play tournament");
+          return;
+        }
+        // For fresh import, just apply the players directly
+        await applyMatchPlayPlayers(result.players);
+      } else {
+        // Players exist but no MP IDs - warn and ask to replace
+        const shouldReplace = confirm(
+          `This will replace all ${result.existingCount} existing players with ${result.players.length} players from Match Play. Continue?`
+        );
+        if (shouldReplace) {
+          await applyMatchPlayPlayers(result.players);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching from Match Play:", err);
+      setError("Failed to connect to Match Play");
+    } finally {
+      setIsFetchingMP(false);
+    }
+  }
+
+  async function applyMatchPlayPlayers(playersToImport: MappedPlayer[]) {
+    setIsApplyingMP(true);
+    setError(null);
+
+    try {
+      const result = await importMatchPlayPlayers(tournament.id, playersToImport);
+
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setShowMpDiff(false);
+        setMpDiff(null);
+        setMpPlayers(null);
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error("Error applying Match Play players:", err);
+      setError("Failed to apply Match Play players");
+    } finally {
+      setIsApplyingMP(false);
+    }
+  }
+
+  function handleConfirmMpDiff() {
+    if (mpPlayers) {
+      applyMatchPlayPlayers(mpPlayers);
+    }
+  }
+
+  function handleCancelMpDiff() {
+    setShowMpDiff(false);
+    setMpDiff(null);
+    setMpPlayers(null);
+  }
+
   return (
     <div className="space-y-6">
+      {/* Match Play Diff Modal */}
+      {showMpDiff && mpDiff && (
+        <MatchPlayDiff
+          diff={mpDiff}
+          bracketCount={bracketCount}
+          onConfirm={handleConfirmMpDiff}
+          onCancel={handleCancelMpDiff}
+          isApplying={isApplyingMP}
+        />
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -166,14 +274,25 @@ export default function PlayerManagement({
             Drag to reorder players. Changes are saved when you click Save.
           </p>
         </div>
-        {players.length > 0 && (
-          <button
-            onClick={() => setShowBulkImport(!showBulkImport)}
-            className="text-[rgb(var(--color-accent-primary))] hover:text-[rgb(var(--color-accent-hover))] text-sm font-medium"
-          >
-            {showBulkImport ? "Show Player List" : "Bulk Import"}
-          </button>
-        )}
+        <div className="flex gap-2">
+          {tournament.matchplay_id && (
+            <button
+              onClick={handleFetchFromMatchPlay}
+              disabled={isFetchingMP}
+              className="px-3 py-1.5 bg-[rgb(var(--color-bg-tertiary))] text-[rgb(var(--color-text-secondary))] rounded-lg hover:bg-[rgb(var(--color-border-secondary))] text-sm font-medium disabled:opacity-50"
+            >
+              {isFetchingMP ? "Syncing..." : "Sync from Match Play"}
+            </button>
+          )}
+          {players.length > 0 && (
+            <button
+              onClick={() => setShowBulkImport(!showBulkImport)}
+              className="text-[rgb(var(--color-accent-primary))] hover:text-[rgb(var(--color-accent-hover))] text-sm font-medium"
+            >
+              {showBulkImport ? "Show Player List" : "Bulk Import"}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (

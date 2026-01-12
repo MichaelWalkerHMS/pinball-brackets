@@ -72,7 +72,7 @@ Bracket prediction app for IFPA pinball tournaments.
 
 3. Maximum 5 review iterations. If you can't resolve issues after 5 cycles, escalate.
 
-4. **Log non-blocking findings:** After approval, any non-blocking suggestions (LOW severity, or MEDIUM/HIGH that were explicitly deferred) must be added to `future-improvements.md` following its format guide. This ensures good suggestions aren't lost.
+4. **Log deferred findings:** If the review includes non-blocking suggestions that you choose NOT to fix (due to time, scope, or explicit deferral), add them to `future-improvements.md` following its format guide. This ensures good suggestions aren't lost. Note: It's often better to fix non-blocking issues while context is fresh - only defer when there's a good reason.
 
 **Never push code that hasn't been approved by the review subagent. No exceptions.**
 
@@ -85,9 +85,11 @@ Non-blocking code review findings, technical debt, and improvement ideas are tra
 - Has a "Completed Items" section for tracking what's been addressed
 
 **When to add entries:**
-- Non-blocking findings from code review (after PR is approved)
-- Technical debt identified during development
-- Ideas for improvement that aren't in scope for current work
+- Non-blocking code review findings that you explicitly chose NOT to fix
+- Technical debt identified during development that's out of scope
+- Ideas for improvement discovered while working on something else
+
+**Important:** Don't add entries just to avoid fixing things. If a non-blocking issue can be fixed quickly while you have context, fix it. Only defer when there's a legitimate reason (time pressure, needs broader discussion, requires architectural changes, etc.).
 
 **When reviewing `future-improvements.md`:**
 - Check for CRITICAL/HIGH items that should be prioritized

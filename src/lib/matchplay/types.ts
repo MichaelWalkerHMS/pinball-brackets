@@ -15,12 +15,20 @@ export interface MatchPlayTournament {
   status: 'created' | 'started' | 'completed';
   startDate: string | null;
   endDate: string | null;
-  type: string; // e.g., 'single_elimination', 'double_elimination', etc.
+  type: string; // e.g., 'bracket', 'group_knockout', etc.
   organizerId: number;
   venueId: number | null;
   venueName: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Number of games per match. For bracket tournaments:
+   * - 1 = Single match (standard W/L, uses resultPositions)
+   * - 3, 5, 7, etc. = Best-of-N (per-game tracking, uses resultPoints)
+   */
+  bestOf?: number;
+  /** Size of the bracket (16, 32, etc.) */
+  bracketSize?: number;
 }
 
 export interface MatchPlayTournamentWithPlayers extends MatchPlayTournament {

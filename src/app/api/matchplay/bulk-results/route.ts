@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createMatchPlayClient, safeMatchPlayCall } from '@/lib/matchplay/client';
-import { mapMatchPlayGames } from '@/lib/matchplay/resultMapper';
+import { createMatchPlayClient, safeMatchPlayCall, mapMatchPlayGames } from '@/lib/matchplay';
 import { recalculateScores } from '@/lib/scoring';
 
 interface TournamentSyncResult {

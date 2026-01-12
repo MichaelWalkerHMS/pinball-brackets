@@ -1,3 +1,206 @@
+# PR Review - Per-Game Result Tracking Support
+
+**Review Date:** 2026-01-12
+**Branch:** feat/per-game-result-tracking
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR adds support for MatchPlay's per-game result tracking format, which is used when tournaments use best-of-N matches (e.g., best-of-7). The implementation correctly handles both the standard W/L format (`resultPositions`) and the per-game tracking format (`resultPoints`), extracts game counts for future bracket display, and includes comprehensive test coverage with 7 new tests.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+#### 1. Missing Barrel Export for resultMapper
+
+**File:** `src/lib/matchplay/index.ts`
+
+**Issue:**
+The `resultMapper.ts` exports (`mapMatchPlayGames`, `countResultsByRound`, `buildSeedMap`, etc.) are not included in the barrel export. Currently, API routes import directly from the file:
+```typescript
+import { mapMatchPlayGames } from '@/lib/matchplay/resultMapper';
+```
+
+This is inconsistent with the coding standard "Barrel Exports for Library Directories" which states all directories under `src/lib/` must have an `index.ts` that re-exports public types and functions.
+
+**Why it matters:**
+Inconsistent import patterns make the codebase harder to navigate and maintain. When the barrel export pattern is used inconsistently, developers must guess whether to import from the index or from specific files.
+
+**Suggested fix:**
+Add to `src/lib/matchplay/index.ts`:
+```typescript
+export {
+  mapMatchPlayGames,
+  countResultsByRound,
+  buildSeedMap,
+  getRoundFromIndex,
+  getPositionFromIndex,
+  getOpeningRoundPosition,
+} from './resultMapper';
+export type { MappedResult, MapResultsOutput } from './resultMapper';
+```
+
+Then update imports in:
+- `src/app/api/matchplay/results/route.ts`
+- `src/app/api/matchplay/bulk-results/route.ts`
+
+---
+
+### 🔵 Low
+
+#### 1. Type Assertions in Tests
+
+**File:** `__tests__/unit/lib/matchplay-resultMapper.test.ts` (multiple lines)
+
+**Issue:**
+Tests use `null as unknown as number` for resultPositions to simulate null values:
+```typescript
+resultPositions: [null as unknown as number, null as unknown as number],
+```
+
+**Why it matters:**
+While this works and accurately simulates the API response (where TypeScript types may not match runtime reality), it's a bit awkward. The test correctly handles the real-world scenario where the API sends null values even though the type says `number[]`.
+
+**Suggested action:**
+No change required. This is an accurate representation of the API behavior where the type definition doesn't match runtime data. The test documents this edge case well.
+
+---
+
+#### 2. New Fields Not Documented in JSDoc
+
+**File:** `src/lib/matchplay/types.ts` (lines 24-31)
+
+**Issue:**
+The new `bestOf` and `bracketSize` fields on `MatchPlayTournament` have JSDoc comments, which is good. However, they are marked as optional (`?`) but the comment doesn't explain when they would be undefined.
+
+**Why it matters:**
+Minor documentation gap - developers may not know when these fields are populated.
+
+**Suggested enhancement (optional):**
+```typescript
+/**
+ * Number of games per match. For bracket tournaments:
+ * - 1 = Single match (standard W/L, uses resultPositions)
+ * - 3, 5, 7, etc. = Best-of-N (per-game tracking, uses resultPoints)
+ *
+ * May be undefined for non-bracket tournament types.
+ */
+bestOf?: number;
+```
+
+---
+
+### 🟢 Praise
+
+#### Excellent Dual-Format Handling
+
+**File:** `src/lib/matchplay/resultMapper.ts` (lines 128-161, 183-237)
+
+The implementation elegantly handles both result formats:
+- `hasValidResultPositions()` checks for standard W/L format
+- `hasValidResultPoints()` checks for per-game tracking format
+- `getWinnerLoser()` correctly determines winner from either format with proper fallback logic
+- When both formats are present (standard format with game counts), it correctly extracts game counts aligned with playerIds
+
+This is exactly the right approach for handling external API data that can vary in format.
+
+#### Comprehensive Test Coverage
+
+**File:** `__tests__/unit/lib/matchplay-resultMapper.test.ts` (lines 371-527)
+
+Seven new tests thoroughly cover the per-game tracking scenarios:
+1. Maps games using resultPoints when resultPositions are null
+2. Correctly identifies winner when player2 has more points (upset scenario)
+3. Extracts game counts when both resultPositions and resultPoints are valid
+4. Skips games with tied points (incomplete match)
+5. Skips incomplete games even with partial per-game results
+6. Handles 16-player tournament correctly
+7. Handles missing resultPoints gracefully
+
+This is excellent test coverage that documents the expected behavior for edge cases.
+
+#### Clear Skip Reason Messages
+
+**File:** `src/lib/matchplay/resultMapper.ts` (lines 383-407)
+
+The refactored skip reason logic provides specific, actionable messages:
+- `"Game tied at X-X (no winner yet)"` for tied games
+- `"Missing result data"` for empty resultPoints
+- `"Game not completed"` for incomplete games
+
+This makes debugging much easier when games are unexpectedly skipped.
+
+#### Well-Structured Helper Functions
+
+**Files:** `src/lib/matchplay/resultMapper.ts` (lines 139-161)
+
+The new helper functions (`hasValidResultPositions`, `hasValidResultPoints`) are:
+- Single responsibility - each checks one format
+- Well-named - clearly indicate what they validate
+- Reused - called from both `isValidGame` and `getWinnerLoser`
+
+#### Type Safety Maintained
+
+**File:** `src/lib/matchplay/resultMapper.ts` (line 128-137)
+
+The new `GameResult` interface properly types the return value including optional game counts:
+```typescript
+interface GameResult {
+  winnerId: number;
+  loserId: number;
+  winnerGames: number | undefined;
+  loserGames: number | undefined;
+}
+```
+
+This flows through to `MappedResult` which now includes `winner_games` and `loser_games` fields, matching the `ResultInput` type.
+
+---
+
+## Verification
+
+- **Tests:** All 244 tests pass (including 7 new per-game tracking tests)
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows utility module structure, but missing barrel exports
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** CHANGES_REQUESTED
+
+One medium-severity issue needs to be addressed before merge:
+
+1. **Missing barrel exports** - Add resultMapper exports to `src/lib/matchplay/index.ts` to follow the established "Barrel Exports for Library Directories" coding standard.
+
+The implementation is solid, well-tested, and handles the dual-format scenario correctly. Once the barrel export is added, this is ready to merge.
+
+---
+
 # PR Review - Standardize Match Play Client Error Handling
 
 **Review Date:** 2026-01-12

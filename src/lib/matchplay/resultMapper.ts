@@ -5,7 +5,8 @@
  * Handles:
  * - Filtering bye games and multi-player consolation matches
  * - Round detection via standard bracket indexing
- * - Winner/loser determination from resultPositions
+ * - Winner/loser determination from resultPositions or resultPoints
+ * - Per-game score extraction from resultPoints (e.g., best-of-7 match tracking)
  * - Semi-final tracking for Finals vs Consolation validation
  */
 
@@ -125,6 +126,41 @@ export function getOpeningRoundPosition(seed1: number, seed2: number): number {
 }
 
 /**
+ * Result of extracting winner/loser from a game, including game counts.
+ */
+interface GameResult {
+  winnerId: number;
+  loserId: number;
+  winnerGames: number | undefined;
+  loserGames: number | undefined;
+}
+
+/**
+ * Check if resultPositions contains valid (non-null) player IDs.
+ */
+function hasValidResultPositions(game: MatchPlayGame): boolean {
+  return (
+    game.resultPositions &&
+    game.resultPositions.length >= 2 &&
+    game.resultPositions[0] !== null &&
+    game.resultPositions[1] !== null
+  );
+}
+
+/**
+ * Check if resultPoints contains valid data to determine a winner.
+ * Used when per-game tracking is enabled and resultPositions are null.
+ */
+function hasValidResultPoints(game: MatchPlayGame): boolean {
+  if (!game.resultPoints || game.resultPoints.length !== 2) return false;
+  if (game.playerIds.length !== 2) return false;
+
+  const points = game.resultPoints.map((p) => parseFloat(p) || 0);
+  // Must have different point values to determine a winner
+  return points[0] !== points[1];
+}
+
+/**
  * Check if a game is a valid head-to-head match we should process.
  */
 function isValidGame(game: MatchPlayGame): boolean {
@@ -137,22 +173,67 @@ function isValidGame(game: MatchPlayGame): boolean {
   // Skip incomplete games
   if (game.status !== 'completed') return false;
 
-  // Must have result positions
-  if (!game.resultPositions || game.resultPositions.length < 2) return false;
+  // Must have either valid resultPositions OR valid resultPoints
+  if (!hasValidResultPositions(game) && !hasValidResultPoints(game)) return false;
 
   return true;
 }
 
 /**
  * Extract winner and loser player IDs from a game.
+ *
+ * Supports two MatchPlay result formats:
+ * 1. Standard W/L: resultPositions = [winnerId, loserId]
+ * 2. Per-game tracking: resultPositions = [null, null], resultPoints = ["4.00", "2.00"]
+ *    - Player with higher points is the winner
+ *    - Points represent games won in a best-of-N match
  */
-function getWinnerLoser(game: MatchPlayGame): { winnerId: number; loserId: number } | null {
-  if (game.resultPositions.length < 2) return null;
+function getWinnerLoser(game: MatchPlayGame): GameResult | null {
+  // Method 1: Use resultPositions if valid (standard W/L format)
+  if (hasValidResultPositions(game)) {
+    // Parse game counts from resultPoints if available
+    let winnerGames: number | undefined;
+    let loserGames: number | undefined;
 
-  return {
-    winnerId: game.resultPositions[0],
-    loserId: game.resultPositions[1],
-  };
+    if (game.resultPoints && game.resultPoints.length === 2) {
+      // resultPoints is aligned with playerIds, not resultPositions
+      // So we need to find which points belong to winner vs loser
+      const winnerId = game.resultPositions[0];
+      const winnerIndex = game.playerIds.indexOf(winnerId);
+
+      if (winnerIndex !== -1) {
+        const loserIndex = winnerIndex === 0 ? 1 : 0;
+        winnerGames = Math.floor(parseFloat(game.resultPoints[winnerIndex]) || 0);
+        loserGames = Math.floor(parseFloat(game.resultPoints[loserIndex]) || 0);
+      }
+    }
+
+    return {
+      winnerId: game.resultPositions[0],
+      loserId: game.resultPositions[1],
+      winnerGames,
+      loserGames,
+    };
+  }
+
+  // Method 2: Determine winner from resultPoints (per-game tracking format)
+  if (hasValidResultPoints(game)) {
+    const points = game.resultPoints.map((p) => parseFloat(p) || 0);
+    const [player1Id, player2Id] = game.playerIds;
+
+    // Higher points = winner
+    const winnerIndex = points[0] > points[1] ? 0 : 1;
+    const loserIndex = winnerIndex === 0 ? 1 : 0;
+
+    return {
+      winnerId: winnerIndex === 0 ? player1Id : player2Id,
+      loserId: loserIndex === 0 ? player1Id : player2Id,
+      winnerGames: Math.floor(points[winnerIndex]),
+      loserGames: Math.floor(points[loserIndex]),
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -214,7 +295,7 @@ function mapSingleGame(
     return { error: 'Cannot determine winner/loser' };
   }
 
-  const { winnerId, loserId } = result;
+  const { winnerId, loserId, winnerGames, loserGames } = result;
 
   // Look up seeds
   const winnerSeed = seedMap.get(winnerId);
@@ -263,6 +344,8 @@ function mapSingleGame(
     match_position: position,
     winner_seed: winnerSeed,
     loser_seed: loserSeed,
+    winner_games: winnerGames,
+    loser_games: loserGames,
     matchPlayGameId: game.gameId,
   };
 }
@@ -297,14 +380,30 @@ export function mapMatchPlayGames(
         // Don't log bye games as skipped - they're expected
         continue;
       }
-      skipped.push({
-        gameId: game.gameId,
-        reason: game.playerIds.length !== 2
-          ? `Non-head-to-head match (${game.playerIds.length} players)`
-          : game.status !== 'completed'
-          ? 'Game not completed'
-          : 'Invalid game data',
-      });
+
+      // Determine specific skip reason
+      let reason: string;
+      if (game.playerIds.length !== 2) {
+        reason = `Non-head-to-head match (${game.playerIds.length} players)`;
+      } else if (game.status !== 'completed') {
+        reason = 'Game not completed';
+      } else if (!hasValidResultPositions(game) && !hasValidResultPoints(game)) {
+        // Check if it's a tied game
+        if (game.resultPoints && game.resultPoints.length === 2) {
+          const points = game.resultPoints.map((p) => parseFloat(p) || 0);
+          if (points[0] === points[1]) {
+            reason = `Game tied at ${points[0]}-${points[1]} (no winner yet)`;
+          } else {
+            reason = 'Invalid result data';
+          }
+        } else {
+          reason = 'Missing result data';
+        }
+      } else {
+        reason = 'Invalid game data';
+      }
+
+      skipped.push({ gameId: game.gameId, reason });
       continue;
     }
 

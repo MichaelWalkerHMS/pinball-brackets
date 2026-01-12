@@ -580,3 +580,152 @@ export async function manualRecalculateScores(tournamentId: string) {
   revalidatePath(`/tournament/${tournamentId}`);
   return { success: true, count: result.count };
 }
+
+/**
+ * Import players from Match Play Events
+ * Replaces all existing players with the Match Play data
+ * Re-validates against Match Play API to prevent data tampering
+ */
+export async function importMatchPlayPlayers(
+  tournamentId: string,
+  players: Array<{
+    name: string;
+    seed: number;
+    matchplay_id: string;
+    ifpa_id: number | null;
+  }>
+) {
+  const auth = await requireAdmin();
+  if ("error" in auth) {
+    return { error: auth.error };
+  }
+
+  const supabase = await createClient();
+
+  // Verify tournament exists and has a matchplay_id
+  const { data: tournament, error: tournamentError } = await supabase
+    .from("tournaments")
+    .select("id, player_count, matchplay_id")
+    .eq("id", tournamentId)
+    .single();
+
+  if (tournamentError || !tournament) {
+    return { error: "Tournament not found" };
+  }
+
+  if (!tournament.matchplay_id) {
+    return { error: "Tournament does not have a Match Play ID configured" };
+  }
+
+  // Server-side validation: Re-fetch players from Match Play to prevent data tampering
+  const { createMatchPlayClient, mapMatchPlayPlayers } = await import("@/lib/matchplay");
+
+  try {
+    const client = createMatchPlayClient();
+    const mpTournament = await client.getTournamentWithPlayers(tournament.matchplay_id);
+    const validatedPlayers = mapMatchPlayPlayers(mpTournament.players);
+
+    // Verify the submitted data matches what we get from Match Play
+    const mpPlayerMap = new Map(validatedPlayers.map((p) => [p.matchplay_id, p]));
+
+    for (const submitted of players) {
+      const mpPlayer = mpPlayerMap.get(submitted.matchplay_id);
+      if (!mpPlayer) {
+        return { error: `Player with Match Play ID ${submitted.matchplay_id} not found in Match Play tournament` };
+      }
+      // Use the validated data from Match Play instead of client-submitted data
+    }
+
+    // Use the validated Match Play data instead of client-submitted data
+    // This ensures we only import data that actually exists in Match Play
+    players = validatedPlayers;
+  } catch (err) {
+    console.error("Error validating against Match Play:", err);
+    return { error: "Failed to validate players against Match Play. Please try again." };
+  }
+
+  // Validate player count
+  if (players.length > tournament.player_count) {
+    return {
+      error: `Too many players. Maximum is ${tournament.player_count}.`,
+    };
+  }
+
+  // Check if there are existing brackets
+  const { count: bracketCount } = await supabase
+    .from("brackets")
+    .select("*", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId);
+
+  // Get existing players for change detection
+  const { data: existingPlayers } = await supabase
+    .from("players")
+    .select("seed, name, matchplay_id")
+    .eq("tournament_id", tournamentId)
+    .order("seed", { ascending: true });
+
+  // Delete existing players
+  const { error: deleteError } = await supabase
+    .from("players")
+    .delete()
+    .eq("tournament_id", tournamentId);
+
+  if (deleteError) {
+    console.error("Error deleting existing players:", deleteError);
+    return { error: "Failed to clear existing players" };
+  }
+
+  // Insert new players from Match Play
+  const playersToInsert = players.map((p) => ({
+    tournament_id: tournamentId,
+    name: p.name,
+    seed: p.seed,
+    matchplay_id: p.matchplay_id,
+    ifpa_id: p.ifpa_id,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("players")
+    .insert(playersToInsert);
+
+  if (insertError) {
+    console.error("Error inserting players:", insertError);
+    return { error: "Failed to insert players" };
+  }
+
+  // Log seeding change if brackets exist
+  if (bracketCount && bracketCount > 0 && existingPlayers) {
+    // Determine affected seeds
+    const affectedSeeds: number[] = [];
+    const existingBySeed = new Map(existingPlayers.map((p) => [p.seed, p]));
+
+    for (const newPlayer of players) {
+      const existing = existingBySeed.get(newPlayer.seed);
+      if (!existing || existing.name !== newPlayer.name || existing.matchplay_id !== newPlayer.matchplay_id) {
+        affectedSeeds.push(newPlayer.seed);
+      }
+    }
+
+    // Check for removed seeds
+    for (const existing of existingPlayers) {
+      if (!players.some((p) => p.seed === existing.seed)) {
+        affectedSeeds.push(existing.seed);
+      }
+    }
+
+    const uniqueAffectedSeeds = [...new Set(affectedSeeds)].sort((a, b) => a - b);
+
+    if (uniqueAffectedSeeds.length > 0) {
+      await supabase.from("seeding_change_log").insert({
+        tournament_id: tournamentId,
+        changed_by: auth.user.id,
+        change_type: "bulk_import",
+        affected_seeds: uniqueAffectedSeeds,
+        description: `Match Play import: ${players.length} players (${uniqueAffectedSeeds.length} seeds affected)`,
+      });
+    }
+  }
+
+  revalidatePath(`/admin/tournament/${tournamentId}`);
+  return { success: true, count: players.length };
+}

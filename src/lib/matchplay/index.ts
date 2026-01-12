@@ -17,3 +17,10 @@ export type {
   MatchPlayApiListResponse,
   MatchPlayApiError,
 } from './types';
+
+export {
+  mapMatchPlayPlayers,
+  comparePlayerLists,
+  hasDiffChanges,
+} from './playerMapper';
+export type { MappedPlayer, PlayerDiff } from './playerMapper';

@@ -35,9 +35,9 @@ export interface MapResultsOutput {
  * @returns Winner and loser player data, or null if cannot determine
  */
 function extractWinnerLoser(
-  players: MatchPlayGamePlayer[]
+  players: MatchPlayGamePlayer[] | undefined
 ): { winner: MatchPlayGamePlayer; loser: MatchPlayGamePlayer } | null {
-  if (players.length !== 2) return null;
+  if (!players || players.length !== 2) return null;
 
   const winner = players.find((p) => p.result === 'win');
   const loser = players.find((p) => p.result === 'loss');

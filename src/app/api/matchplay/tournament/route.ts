@@ -43,10 +43,38 @@ export async function GET(request: NextRequest) {
     const tournament = await client.getTournament(matchplayId);
 
     // Map Match Play data to our form format
+    // Note: Match Play returns startUtc/endUtc, not startDate/endDate
+    const mpData = tournament as Record<string, unknown>;
+    const bracketSize = mpData.bracketSize as number | undefined;
+    const startUtc = mpData.startUtc as string | null;
+
+    // Calculate end date as 10 hours after start date (Match Play end date is often same as start)
+    let endDate = "";
+    if (startUtc) {
+      const startDate = new Date(startUtc);
+      const calculatedEnd = new Date(startDate.getTime() + 10 * 60 * 60 * 1000); // +10 hours
+      endDate = calculatedEnd.toISOString();
+    }
+
+    // Determine if we can auto-set player count
+    let player_count: 16 | 24 | null = null;
+    let player_count_warning: string | null = null;
+
+    // Match Play uses bracketSize 32 for 24-player tournaments, 16 for 16-player
+    if (bracketSize === 16) {
+      player_count = 16;
+    } else if (bracketSize === 32) {
+      player_count = 24;
+    } else if (bracketSize) {
+      player_count_warning = `Match Play tournament has bracket size ${bracketSize}. This app only supports 16-player (bracketSize 16) or 24-player (bracketSize 32) brackets. Please set the player count manually.`;
+    }
+
     const formData = {
       name: tournament.name,
-      start_date: tournament.startDate || "",
-      end_date: tournament.endDate || "",
+      start_date: startUtc || "",
+      end_date: endDate,
+      player_count,
+      player_count_warning,
     };
 
     return NextResponse.json({ data: formData });

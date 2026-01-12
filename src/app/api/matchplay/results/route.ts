@@ -123,6 +123,37 @@ export async function POST(request: NextRequest): Promise<NextResponse<SyncResul
     });
   }
 
+  // Debug: log games grouped by roundId to see structure
+  console.log("=== Match Play Games Response ===");
+  console.log("Total games:", games.length);
+
+  // Group games by roundId to see round delineation
+  const gamesByRound = new Map<number, typeof games>();
+  for (const game of games) {
+    const roundId = (game as Record<string, unknown>).roundId as number;
+    if (!gamesByRound.has(roundId)) {
+      gamesByRound.set(roundId, []);
+    }
+    gamesByRound.get(roundId)!.push(game);
+  }
+
+  console.log("Games grouped by roundId:");
+  for (const [roundId, roundGames] of gamesByRound) {
+    const byeCount = roundGames.filter(g => (g as Record<string, unknown>).bye === true).length;
+    const actualCount = roundGames.length - byeCount;
+    console.log(`  roundId ${roundId}: ${roundGames.length} games (${byeCount} byes, ${actualCount} actual matches)`);
+    // Show ALL non-bye games with their index values
+    const actualGames = roundGames.filter(g => (g as Record<string, unknown>).bye !== true);
+    console.log(`    Game indices: [${actualGames.map(g => (g as Record<string, unknown>).index).join(', ')}]`);
+    // Show compact summary of each game: index, playerIds, winner
+    for (const game of actualGames) {
+      const g = game as Record<string, unknown>;
+      const playerIds = g.playerIds as number[];
+      const resultPositions = g.resultPositions as number[];
+      console.log(`    index=${g.index}: players=[${playerIds.join(',')}] winner=${resultPositions[0]}`);
+    }
+  }
+
   // Map Match Play games to our format
   const { results, skipped } = mapMatchPlayGames(games, playerCount);
 

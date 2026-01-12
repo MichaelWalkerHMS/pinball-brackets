@@ -17,16 +17,20 @@ export interface MappedPlayer {
  * @returns Array of mapped player objects sorted by seed
  */
 export function mapMatchPlayPlayers(players: MatchPlayPlayer[]): MappedPlayer[] {
-  // Filter to only active players with seeds
-  const activePlayers = players.filter(
-    (p) => p.status === "active" && p.seed !== null
-  );
+  // Filter to only active players with valid seeds
+  // Note: seed is nested in tournamentPlayer object from Match Play API
+  // Match Play uses 0-based indexing (seed 0 = 1st seed, seed 1 = 2nd seed, etc.)
+  const activePlayers = players.filter((p) => {
+    const seed = p.tournamentPlayer?.seed;
+    const status = p.tournamentPlayer?.status ?? p.status;
+    return status === "active" && seed !== null && seed !== undefined;
+  });
 
-  // Map to our format and sort by seed
+  // Map to our format and convert from 0-indexed to 1-indexed seeds
   return activePlayers
     .map((p) => ({
       name: p.name,
-      seed: p.seed as number,
+      seed: (p.tournamentPlayer!.seed as number) + 1, // Convert 0-indexed to 1-indexed
       matchplay_id: String(p.playerId),
       ifpa_id: p.ifpaId,
     }))

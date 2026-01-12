@@ -85,11 +85,19 @@ export default function TournamentForm({
 
       // Pre-fill form with fetched data
       const mpData = result.data;
+
+      // Show warning if player count is not 16 or 24
+      if (mpData.player_count_warning) {
+        setError(mpData.player_count_warning);
+      }
+
       setFormData((prev) => ({
         ...prev,
         name: mpData.name || prev.name,
         start_date: mpData.start_date ? formatDateTimeLocal(mpData.start_date) : prev.start_date,
         end_date: mpData.end_date ? formatDateTimeLocal(mpData.end_date) : prev.end_date,
+        // Auto-set player count if Match Play returns 16 or 24
+        player_count: mpData.player_count || prev.player_count,
       }));
     } catch (err) {
       console.error("Error fetching from Match Play:", err);

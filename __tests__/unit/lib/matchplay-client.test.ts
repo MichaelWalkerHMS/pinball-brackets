@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
-import { MatchPlayClient, createMatchPlayClient } from '@/lib/matchplay/client';
+import { MatchPlayClient, createMatchPlayClient, safeMatchPlayCall } from '@/lib/matchplay/client';
 import { MatchPlayError } from '@/lib/matchplay/types';
 
 const MATCHPLAY_BASE_URL = 'https://app.matchplay.events/api';
@@ -295,5 +295,118 @@ describe('MatchPlayClient', () => {
       const client = createMatchPlayClient(TEST_TOKEN);
       expect(client).toBeInstanceOf(MatchPlayClient);
     });
+  });
+});
+
+describe('safeMatchPlayCall', () => {
+  beforeEach(() => {
+    vi.stubEnv('MATCHPLAY_API_TOKEN', 'test-token');
+  });
+
+  it('returns success result when call succeeds', async () => {
+    const mockData = { id: 123, name: 'Test' };
+    const result = await safeMatchPlayCall(
+      () => Promise.resolve(mockData),
+      'test action'
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual(mockData);
+    }
+  });
+
+  it('returns error result with MatchPlayError status', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await safeMatchPlayCall(
+      () => Promise.reject(new MatchPlayError('Tournament not found', 404, 'NOT_FOUND')),
+      'fetch tournament'
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe('Tournament not found');
+      expect(result.status).toBe(404);
+    }
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[Match Play] fetch tournament failed:',
+      expect.any(MatchPlayError)
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it('returns 502 status for non-MatchPlayError exceptions', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await safeMatchPlayCall(
+      () => Promise.reject(new Error('Network error')),
+      'fetch games'
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe('Failed to fetch games from Match Play');
+      expect(result.status).toBe(502);
+    }
+
+    consoleSpy.mockRestore();
+  });
+
+  it('handles non-Error exceptions gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await safeMatchPlayCall(
+      () => Promise.reject('string error'),
+      'fetch data'
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe('Failed to fetch data from Match Play');
+      expect(result.status).toBe(502);
+    }
+
+    consoleSpy.mockRestore();
+  });
+
+  it('preserves MatchPlayError status codes like 429 rate limit', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await safeMatchPlayCall(
+      () => Promise.reject(new MatchPlayError('Rate limited', 429, 'RATE_LIMITED')),
+      'sync results'
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.status).toBe(429);
+      expect(result.error).toBe('Rate limited');
+    }
+
+    consoleSpy.mockRestore();
+  });
+
+  it('works with real client method calls', async () => {
+    const TEST_TOKEN = 'test-api-token';
+
+    server.use(
+      http.get(`${MATCHPLAY_BASE_URL}/tournaments/12345`, () => {
+        return HttpResponse.json({ data: mockTournament });
+      })
+    );
+
+    const client = new MatchPlayClient(TEST_TOKEN);
+    const result = await safeMatchPlayCall(
+      () => client.getTournament('12345'),
+      'fetch tournament'
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe('Michigan State Championship 2026');
+    }
   });
 });

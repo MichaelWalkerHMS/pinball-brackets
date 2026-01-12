@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createMatchPlayClient } from '@/lib/matchplay/client';
+import { createMatchPlayClient, safeMatchPlayCall } from '@/lib/matchplay/client';
 import { mapMatchPlayGames, countResultsByRound } from '@/lib/matchplay/resultMapper';
 import { recalculateScores } from '@/lib/scoring';
 import { ROUND_NAMES } from '@/lib/bracket/constants';
@@ -104,24 +104,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<SyncResul
   const matchplayId = String(tournament.matchplay_id);
 
   // Fetch completed games and players from Match Play
-  let games;
-  let players;
-  try {
-    const client = createMatchPlayClient();
-    // Fetch games and players in parallel
-    const [gamesResult, tournamentWithPlayers] = await Promise.all([
-      client.getCompletedGames(matchplayId),
-      client.getTournamentWithPlayers(matchplayId),
-    ]);
-    games = gamesResult;
-    players = tournamentWithPlayers.players;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to fetch from Match Play';
+  const client = createMatchPlayClient();
+
+  // Fetch games and players in parallel with standardized error handling
+  const [gamesResult, playersResult] = await Promise.all([
+    safeMatchPlayCall(() => client.getCompletedGames(matchplayId), 'fetch games'),
+    safeMatchPlayCall(() => client.getTournamentWithPlayers(matchplayId), 'fetch players'),
+  ]);
+
+  if (!gamesResult.success) {
     return NextResponse.json(
-      { success: false, imported: 0, skipped: 0, byRound: {}, error: message },
-      { status: 502 }
+      { success: false, imported: 0, skipped: 0, byRound: {}, error: gamesResult.error },
+      { status: gamesResult.status }
     );
   }
+
+  if (!playersResult.success) {
+    return NextResponse.json(
+      { success: false, imported: 0, skipped: 0, byRound: {}, error: playersResult.error },
+      { status: playersResult.status }
+    );
+  }
+
+  const games = gamesResult.data;
+  const players = playersResult.data.players;
 
   if (games.length === 0) {
     return NextResponse.json({

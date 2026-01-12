@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createMatchPlayClient } from '@/lib/matchplay/client';
+import { createMatchPlayClient, safeMatchPlayCall } from '@/lib/matchplay/client';
 import { mapMatchPlayGames } from '@/lib/matchplay/resultMapper';
 import { recalculateScores } from '@/lib/scoring';
 
@@ -108,72 +108,82 @@ export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
       skipped: 0,
     };
 
-    try {
-      // Validate player_count
-      if (tournament.player_count !== 16 && tournament.player_count !== 24) {
-        result.error = 'Invalid player count';
-        results.push(result);
-        continue;
-      }
+    // Validate player_count
+    if (tournament.player_count !== 16 && tournament.player_count !== 24) {
+      result.error = 'Invalid player count';
+      results.push(result);
+      continue;
+    }
 
-      // matchplay_id is guaranteed non-null by query filter, but check anyway
-      if (!tournament.matchplay_id) {
-        results.push(result);
-        continue;
-      }
+    // matchplay_id is guaranteed non-null by query filter, but check anyway
+    if (!tournament.matchplay_id) {
+      results.push(result);
+      continue;
+    }
 
-      const matchplayId = String(tournament.matchplay_id);
+    const matchplayId = String(tournament.matchplay_id);
 
-      // Fetch completed games and players from Match Play
-      const [games, tournamentWithPlayers] = await Promise.all([
-        client.getCompletedGames(matchplayId),
-        client.getTournamentWithPlayers(matchplayId),
-      ]);
+    // Fetch completed games and players from Match Play with standardized error handling
+    const [gamesResult, playersResult] = await Promise.all([
+      safeMatchPlayCall(() => client.getCompletedGames(matchplayId), 'fetch games'),
+      safeMatchPlayCall(() => client.getTournamentWithPlayers(matchplayId), 'fetch players'),
+    ]);
 
-      if (games.length === 0) {
-        results.push(result);
-        continue;
-      }
+    if (!gamesResult.success) {
+      result.error = gamesResult.error;
+      results.push(result);
+      continue;
+    }
 
-      const playerCount = tournament.player_count;
-      const { results: mappedResults, skipped } = mapMatchPlayGames(
-        games,
-        tournamentWithPlayers.players,
-        playerCount
+    if (!playersResult.success) {
+      result.error = playersResult.error;
+      results.push(result);
+      continue;
+    }
+
+    const games = gamesResult.data;
+
+    if (games.length === 0) {
+      results.push(result);
+      continue;
+    }
+
+    const playerCount = tournament.player_count;
+    const { results: mappedResults, skipped } = mapMatchPlayGames(
+      games,
+      playersResult.data.players,
+      playerCount
+    );
+
+    result.skipped = skipped.length;
+    totalSkipped += skipped.length;
+
+    // Save results to database
+    for (const mappedResult of mappedResults) {
+      const { error: upsertError } = await supabase.from('results').upsert(
+        {
+          tournament_id: tournament.id,
+          round: mappedResult.round,
+          match_position: mappedResult.match_position,
+          winner_seed: mappedResult.winner_seed,
+          loser_seed: mappedResult.loser_seed,
+          winner_games: mappedResult.winner_games,
+          loser_games: mappedResult.loser_games,
+        },
+        {
+          onConflict: 'tournament_id,round,match_position',
+        }
       );
 
-      result.skipped = skipped.length;
-      totalSkipped += skipped.length;
-
-      // Save results to database
-      for (const mappedResult of mappedResults) {
-        const { error: upsertError } = await supabase.from('results').upsert(
-          {
-            tournament_id: tournament.id,
-            round: mappedResult.round,
-            match_position: mappedResult.match_position,
-            winner_seed: mappedResult.winner_seed,
-            loser_seed: mappedResult.loser_seed,
-            winner_games: mappedResult.winner_games,
-            loser_games: mappedResult.loser_games,
-          },
-          {
-            onConflict: 'tournament_id,round,match_position',
-          }
-        );
-
-        if (!upsertError) {
-          result.imported++;
-          totalImported++;
-        }
+      if (!upsertError) {
+        result.imported++;
+        totalImported++;
       }
+    }
 
-      // Recalculate scores for this tournament
-      if (result.imported > 0) {
-        await recalculateScores(tournament.id);
-      }
-    } catch (error) {
-      result.error = error instanceof Error ? error.message : 'Sync failed';
+    // Recalculate scores for this tournament
+    if (result.imported > 0) {
+      await recalculateScores(tournament.id);
     }
 
     results.push(result);

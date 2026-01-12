@@ -42,74 +42,6 @@ Severity levels:
 
 ## Entries
 
-### [HIGH] Standardize Match Play Client Error Handling
-**Added:** 2026-01-12 | **Source:** PR #46 / Code Review
-**Area:** Error Handling
-**Files:** `src/app/api/matchplay/results/route.ts` (lines 118-124), and other Match Play API routes
-
-**Current Behavior:**
-The catch block in the results sync API uses a generic fallback message pattern. Each Match Play API route handles errors slightly differently, and error messages may inconsistently reveal or hide Match Play API internals.
-
-**Code Context:**
-```typescript
-// src/app/api/matchplay/results/route.ts:118-124
-} catch (error) {
-  const message = error instanceof Error ? error.message : 'Failed to fetch from Match Play';
-  return NextResponse.json(
-    { success: false, imported: 0, skipped: 0, byRound: {}, error: message },
-    { status: 502 }
-  );
-}
-```
-
-**Suggested Improvement:**
-Create a wrapper function to standardize Match Play client error handling across all endpoints. This ensures consistent error messages, proper logging, and prevents information leakage.
-
-**Suggested Fix:**
-```typescript
-// Add to src/lib/matchplay/client.ts or a new utils file
-
-export async function safeMatchPlayCall<T>(
-  fn: () => Promise<T>,
-  actionName: string
-): Promise<{ data: T } | { error: string; status: number }> {
-  try {
-    return { data: await fn() };
-  } catch (err) {
-    console.error(`[Match Play] ${actionName} failed:`, err);
-
-    if (err instanceof MatchPlayError) {
-      // Use Match Play error status but sanitize message
-      return {
-        error: `Match Play ${actionName} failed: ${err.message}`,
-        status: err.status
-      };
-    }
-
-    // Generic fallback for unexpected errors
-    return {
-      error: `Failed to ${actionName} from Match Play`,
-      status: 502
-    };
-  }
-}
-
-// Usage in routes:
-const result = await safeMatchPlayCall(
-  () => client.getCompletedGames(matchplayId),
-  'fetch games'
-);
-if ('error' in result) {
-  return NextResponse.json({ error: result.error }, { status: result.status });
-}
-const games = result.data;
-```
-
-**Why Deferred:**
-Non-blocking - current implementation is safe (uses generic fallback). Improvement is for consistency and maintainability.
-
----
-
 ### [MEDIUM] Add Structured Logging Context to Console Statements
 **Added:** 2026-01-12 | **Source:** PR #46 / Code Review
 **Area:** Code Quality, Observability
@@ -358,4 +290,7 @@ Move items here when they've been addressed, with a note about which PR fixed th
 **Completed:** YYYY-MM-DD | **Fixed in:** PR #XX
 ```
 
-<!-- No completed items yet -->
+### [HIGH] Standardize Match Play Client Error Handling
+**Completed:** 2026-01-12 | **Fixed in:** PR #TBD (standardize-matchplay-error-handling branch)
+
+Added `safeMatchPlayCall` wrapper function to `src/lib/matchplay/client.ts` that provides standardized error handling across all Match Play API routes. Updated `results/route.ts` and `bulk-results/route.ts` to use the wrapper. Added comprehensive unit tests.

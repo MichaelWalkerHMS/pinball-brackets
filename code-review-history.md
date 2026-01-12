@@ -1,3 +1,158 @@
+# PR Review - Standardize Match Play Client Error Handling
+
+**Review Date:** 2026-01-12
+**Branch:** standardize-matchplay-error-handling
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR implements the `[HIGH]` priority item from `future-improvements.md` - "Standardize Match Play Client Error Handling". The implementation adds a `safeMatchPlayCall` wrapper function that provides consistent error handling across all Match Play API routes. The approach is clean, well-typed, thoroughly tested, and follows the coding standards established in the codebase.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+#### 1. Consider Using Discriminated Union Pattern More Explicitly
+
+**File:** `src/lib/matchplay/client.ts` (lines 13-15)
+
+**Issue:**
+The `SafeMatchPlayResult<T>` type uses a discriminated union which is good, but the error branch could include additional context like the original error type for debugging.
+
+**Why it matters:**
+Minor - the current implementation is correct and the error is logged with `console.error`. This is just an optional enhancement for debugging.
+
+**Suggested enhancement (optional):**
+```typescript
+export type SafeMatchPlayResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; status: number; isMatchPlayError?: boolean };
+```
+
+This would help callers distinguish between Match Play API errors vs network/unexpected errors without parsing the message.
+
+**Verdict:** No change required - current implementation is clean and sufficient.
+
+---
+
+### 🟢 Praise
+
+#### Excellent Implementation of the Wrapper Pattern
+
+**File:** `src/lib/matchplay/client.ts` (lines 39-64)
+
+The `safeMatchPlayCall` wrapper is elegantly implemented:
+- Clean generic typing with `<T>` preserves type safety
+- Discriminated union return type makes error handling explicit
+- Console logging provides debugging context with `[Match Play]` prefix
+- Properly handles both `MatchPlayError` (preserves status) and unexpected errors (502 fallback)
+- Excellent JSDoc documentation with usage example
+
+#### Comprehensive Test Coverage
+
+**File:** `__tests__/unit/lib/matchplay-client.test.ts` (lines 301-412)
+
+The new tests (6 total) cover all important scenarios:
+- Success case with mock data
+- MatchPlayError with status code preservation (404)
+- Non-MatchPlayError exceptions (502 fallback)
+- Non-Error exceptions (thrown strings)
+- Rate limiting (429 status)
+- Integration with real client method calls
+
+#### Clean Route Refactoring
+
+**Files:** `src/app/api/matchplay/results/route.ts`, `src/app/api/matchplay/bulk-results/route.ts`
+
+Both routes were refactored to use the new wrapper consistently:
+- Removed try/catch blocks in favor of the wrapper pattern
+- Parallel fetching with `Promise.all` is preserved
+- Error responses now use the correct status codes from Match Play API
+- Code is more readable with explicit success/failure handling
+
+#### Proper Barrel Export Updates
+
+**File:** `src/lib/matchplay/index.ts` (lines 8-13)
+
+The barrel export correctly exports both the function and its type:
+- `safeMatchPlayCall` function export
+- `SafeMatchPlayResult` type export
+
+This follows the established codebase pattern.
+
+---
+
+## Previous Issues - Resolution Status
+
+This PR addresses a deferred improvement from `future-improvements.md`:
+
+| Improvement | Status |
+|-------------|--------|
+| `[HIGH] Standardize Match Play Client Error Handling` | IMPLEMENTED |
+
+The implementation closely follows the suggested fix from the future-improvements document, with a slight enhancement: using `{ success: true/false }` discriminated union instead of `{ data }` vs `{ error }` pattern, which provides cleaner type narrowing.
+
+---
+
+## Verification
+
+- **Tests:** All 237 tests pass (including 6 new tests for `safeMatchPlayCall`)
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows barrel export pattern, has proper test coverage
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well and the `safeMatchPlayCall` pattern is documented in JSDoc.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+The implementation is clean, well-tested, and follows established patterns. Key strengths:
+
+1. **Type-safe** - Generic return type preserves data typing
+2. **Well-documented** - JSDoc with example usage
+3. **Thoroughly tested** - 6 new tests covering success, error, and edge cases
+4. **Consistent** - Both API routes use the same pattern
+5. **Proper exports** - Added to barrel export with type
+
+No blocking issues found. Ready to commit.
+
+---
+
+## Post-Merge Action
+
+After this PR is merged, update `future-improvements.md` to move the "Standardize Match Play Client Error Handling" entry to the "Completed Items" section.
+
+---
+
 # PR Review - Bracket Result Display Refactor
 
 **Review Date:** 2026-01-10

@@ -5,7 +5,12 @@
  * to fetch tournament data, players, and game results.
  */
 
-export { MatchPlayClient, createMatchPlayClient } from './client';
+export {
+  MatchPlayClient,
+  createMatchPlayClient,
+  safeMatchPlayCall,
+} from './client';
+export type { SafeMatchPlayResult } from './client';
 export { MatchPlayError } from './types';
 export type {
   MatchPlayTournament,

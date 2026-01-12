@@ -52,8 +52,8 @@ feature-plans/
 mobile-project-plan.md
 mobile-pr*.md
 code-review-agent.md
-pr-review-comments.md
-ui-implementation-guidelines.md.md
+code-review-history.md
+ui-implementation-guidelines.md
 future-improvements.md
 
 # Playwright

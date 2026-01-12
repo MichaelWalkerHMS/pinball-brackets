@@ -33,6 +33,10 @@ Point values are defined in `src/lib/scoring/calculateScore.ts`.
 - Supabase for auth + database with Row Level Security
 - Local/Preview → Dev Supabase; Production → Prod Supabase
 
+## Coding Standards
+
+See `coding-standards.md` for established code patterns and conventions. All code must follow these standards.
+
 ## Dev-to-Prod Workflow
 
 ### Pre-Push Code Review

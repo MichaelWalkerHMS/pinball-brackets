@@ -73,7 +73,24 @@ See `coding-standards.md` for established code patterns and conventions. All cod
 **Never push code that hasn't been approved by the review subagent.**
 
 ### Code Changes
-Feature branch → PR → Preview deployment (dev DB) → User reviews → Merge to main
+
+**CRITICAL: NEVER commit or push directly to `main` for code changes.**
+
+All code changes must go through a PR for user review before merging. This ensures:
+- User can review changes before they hit production
+- Preview deployment allows testing against dev DB
+- Vercel auto-deploys `main`, so direct pushes bypass all review
+
+**Required workflow:**
+1. Create a feature branch: `git checkout -b fix/descriptive-name` or `feature/descriptive-name`
+2. Make commits on the feature branch
+3. Run code review agent (see Pre-Push Code Review above)
+4. Push the branch: `git push -u origin <branch-name>`
+5. Create PR: `gh pr create`
+6. User reviews PR and preview deployment
+7. User approves and merges (or tells you to merge)
+
+**Exception:** Changes that ONLY modify `.md` files may be committed directly to `main`.
 
 ### Database Changes
 

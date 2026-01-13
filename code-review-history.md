@@ -1,3 +1,302 @@
+# PR Review - MatchPlay Indicator Component (Iteration 2 - APPROVED)
+
+**Review Date:** 2026-01-12
+**Branch:** feature/matchplay-indicator
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of max 5
+
+---
+
+## Summary
+
+This is a re-review after fixes were applied. The `next-env.d.ts` change from iteration 1 has been successfully reverted. The MatchPlay indicator component implementation is clean, well-designed, follows coding standards for CSS variables, and is ready for commit.
+
+---
+
+## Previous Issues - Resolution Status
+
+| Issue | Status |
+|-------|--------|
+| `next-env.d.ts` modification | FIXED (reverted) |
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+#### 1. Missing Accessibility Attributes for Tooltip (carried from iteration 1)
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx` (lines 32-34)
+
+**Issue:**
+The tooltip is implemented using CSS hover which works for mouse users, but keyboard users and screen reader users cannot access the tooltip content.
+
+**Why it matters:**
+The tooltip contains useful information about the MatchPlay integration that should be accessible to all users.
+
+**Suggested enhancement (optional):**
+Consider adding `tabIndex={0}` to the wrapper div and `role="tooltip"` for screen reader support. No change required for approval - this is a suggestion for future improvement.
+
+---
+
+### 🟢 Praise
+
+#### Excellent CSS Variable Usage
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx`
+
+The component correctly uses CSS variables for all colors:
+- `bg-[rgb(var(--color-success-icon))]` for linked state
+- `bg-[rgb(var(--color-text-muted))]` for unlinked state
+- `text-[rgb(var(--color-success-text))]` for linked text
+- `text-[rgb(var(--color-text-muted))]` for unlinked text
+- `bg-[rgb(var(--color-bg-primary))]` and `border-[rgb(var(--color-border-primary))]` for tooltip
+
+This follows the established coding standard "Use CSS Variables for Colors" perfectly.
+
+#### Clean Component Design
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx`
+
+The component is well-designed:
+- Single responsibility - displays one piece of status information
+- Clean interface with only one required prop (`isLinked: boolean`)
+- Self-contained - doesn't depend on external state
+- Reusable - could be used in other contexts if needed
+
+#### Proper Integration
+
+**File:** `src/components/bracket/Bracket.tsx` (lines 428-429)
+
+The indicator is integrated cleanly into the existing controls bar:
+- Uses `isLinked={!!tournament.matchplay_id}` pattern with proper boolean coercion
+- Placed alongside other status indicators (save message, locked status)
+- The refactoring to always show the status div (removing the conditional) is a sensible improvement
+
+#### Good UX Copy
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx` (lines 6-8)
+
+The tooltip text is clear and helpful:
+- Linked: "This tournament is on Match Play, so results will be synced automatically!"
+- Not linked: "This tournament is not linked to Match Play. Results must be entered manually."
+
+The text explains the user benefit, not just the technical state.
+
+#### Proper aria-hidden Usage
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx` (line 19)
+
+The decorative indicator dot correctly uses `aria-hidden="true"` since it's purely visual and the label text conveys the same information.
+
+---
+
+## Verification
+
+- **Tests:** All 244 tests pass
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows CSS variable pattern correctly
+- **Previous Issue:** `next-env.d.ts` change reverted (verified via `git diff next-env.d.ts` - no output)
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+All previous issues have been resolved:
+- `next-env.d.ts` is no longer modified (verified via git diff)
+- All 244 tests pass
+- TypeScript type checking passes
+- Code follows established coding standards for CSS variables
+
+The only remaining item is a LOW-severity accessibility suggestion, which is optional. Ready to commit and push.
+
+---
+
+---
+
+# PR Review - MatchPlay Indicator Component
+
+**Review Date:** 2026-01-12
+**Branch:** feature/matchplay-indicator
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR adds a MatchPlay indicator component to the bracket edit page. The indicator shows whether a tournament is linked to MatchPlay with a visual status (green dot when linked, gray when not linked) and provides a tooltip explaining the integration benefit. The implementation is clean, follows coding standards for CSS variables, and integrates smoothly into the existing Bracket component.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+#### 1. next-env.d.ts Modification Should Not Be Committed
+
+**File:** `next-env.d.ts` (line 3)
+
+**Issue:**
+The diff shows a change from `.next/dev/types/routes.d.ts` to `.next/types/routes.d.ts`. This is an auto-generated file managed by Next.js that should not be committed.
+
+**Why it matters:**
+This file header explicitly states "This file should not be edited." Committing changes causes unnecessary merge conflicts and isn't a real code change. This is a recurring issue that has been flagged in multiple previous reviews.
+
+**Suggested fix:**
+Revert this change before committing:
+```bash
+git checkout main -- next-env.d.ts
+```
+
+---
+
+### 🔵 Low
+
+#### 1. Missing Accessibility Attributes for Tooltip
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx` (lines 32-34)
+
+**Issue:**
+The tooltip is implemented using CSS hover (`:hover` via Tailwind's `group-hover:`) which works for mouse users, but keyboard users and screen reader users cannot access the tooltip content.
+
+**Why it matters:**
+The tooltip contains useful information about the MatchPlay integration that should be accessible to all users. While this is a minor UX enhancement, accessibility is important.
+
+**Suggested enhancement (optional):**
+Consider adding `tabIndex={0}` to the wrapper div and `role="tooltip"` with `aria-describedby` for screen reader support:
+```tsx
+<div className="relative group flex items-center gap-1.5" tabIndex={0}>
+  {/* ... */}
+  <div
+    role="tooltip"
+    className="... group-focus:block ..."
+  >
+```
+
+No change required for approval - this is a suggestion for future improvement.
+
+---
+
+### 🟢 Praise
+
+#### Excellent CSS Variable Usage
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx` (lines 14-17, 23-27)
+
+The component correctly uses CSS variables for all colors:
+- `bg-[rgb(var(--color-success-icon))]` for linked state
+- `bg-[rgb(var(--color-text-muted))]` for unlinked state
+- `text-[rgb(var(--color-success-text))]` for linked text
+- `text-[rgb(var(--color-text-muted))]` for unlinked text
+- `bg-[rgb(var(--color-bg-primary))]` and `border-[rgb(var(--color-border-primary))]` for tooltip
+
+This follows the established coding standard "Use CSS Variables for Colors" perfectly.
+
+#### Clean Component Design
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx`
+
+The component is well-designed:
+- Single responsibility - displays one piece of status information
+- Clean interface with only one required prop (`isLinked: boolean`)
+- Self-contained - doesn't depend on external state
+- Reusable - could be used in other contexts if needed
+
+#### Proper Integration
+
+**File:** `src/components/bracket/Bracket.tsx` (lines 428-429)
+
+The indicator is integrated cleanly into the existing controls bar:
+- Uses the existing `isLinked={!!tournament.matchplay_id}` pattern with proper boolean coercion
+- Placed alongside other status indicators (save message, locked status)
+- The refactoring to always show the status div (removing the conditional) is a sensible improvement
+
+#### Good UX Copy
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx` (lines 6-8)
+
+The tooltip text is clear and helpful:
+- Linked: "This tournament is on Match Play, so results will be synced automatically!"
+- Not linked: "This tournament is not linked to Match Play. Results must be entered manually."
+
+The text explains the user benefit, not just the technical state.
+
+#### Proper aria-hidden Usage
+
+**File:** `src/components/bracket/MatchPlayIndicator.tsx` (line 19)
+
+The decorative indicator dot correctly uses `aria-hidden="true"` since it's purely visual and the label text conveys the same information.
+
+---
+
+## Verification
+
+- **Tests:** All 244 tests pass
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows CSS variable pattern correctly
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** CHANGES_REQUESTED
+
+One medium-severity issue needs to be addressed before merge:
+
+1. **Revert next-env.d.ts** - This auto-generated file change should not be committed
+
+The component implementation itself is clean and ready. Once the next-env.d.ts change is reverted, this is ready to merge.
+
+---
+
+---
+
 # PR Review - Per-Game Result Tracking Support (Iteration 2 - APPROVED)
 
 **Review Date:** 2026-01-12

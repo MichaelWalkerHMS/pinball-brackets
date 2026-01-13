@@ -34,6 +34,7 @@ import Round from "./Round";
 import FinalScoreInput from "./FinalScoreInput";
 import BracketConnector from "./BracketConnector";
 import { deleteBracket } from "@/app/tournament/[id]/actions";
+import MatchPlayIndicator from "./MatchPlayIndicator";
 
 interface BracketViewProps {
   tournament: Tournament;
@@ -424,26 +425,26 @@ export default function BracketView({
               </button>
             </div>
 
-            {/* Status messages */}
-            {(saveMessage || isLocked) && (
-              <div className="flex items-center gap-2 sm:gap-3">
-                {saveMessage && (
-                  <span
-                    className={`text-sm ${
-                      saveMessage.startsWith("Error")
-                        ? "text-[rgb(var(--color-error-icon))]"
-                        : "text-[rgb(var(--color-success-icon))]"
-                    }`}
-                  >
-                    {saveMessage}
-                  </span>
-                )}
+            {/* Status indicators */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <MatchPlayIndicator isLinked={!!tournament.matchplay_id} />
 
-                {isLocked && (
-                  <span className="text-sm text-[rgb(var(--color-error-icon))]">Locked</span>
-                )}
-              </div>
-            )}
+              {saveMessage && (
+                <span
+                  className={`text-sm ${
+                    saveMessage.startsWith("Error")
+                      ? "text-[rgb(var(--color-error-icon))]"
+                      : "text-[rgb(var(--color-success-icon))]"
+                  }`}
+                >
+                  {saveMessage}
+                </span>
+              )}
+
+              {isLocked && (
+                <span className="text-sm text-[rgb(var(--color-error-icon))]">Locked</span>
+              )}
+            </div>
           </div>
         </div>
       )}

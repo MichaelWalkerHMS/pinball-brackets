@@ -76,11 +76,25 @@ See `coding-standards.md` for established code patterns and conventions. All cod
 Feature branch → PR → Preview deployment (dev DB) → User reviews → Merge to main
 
 ### Database Changes
-1. Make changes in DEV Supabase first
-2. Test locally
-3. `npx supabase migration new <name>`
-4. Commit migration file with code
-5. After merge: `npx supabase link --project-ref ynxmkbpdnucrbjyvovpq && npx supabase db push`
+
+**Supabase Project Refs:**
+- **DEV:** `nsmositomvtlhxkghchr` (used by local dev and preview deployments)
+- **PROD:** `ynxmkbpdnucrbjyvovpq` (used by production)
+
+**CRITICAL: Always verify you're linked to the correct project before pushing migrations.**
+
+**During development (before merge):**
+1. Link to DEV: `npx supabase link --project-ref nsmositomvtlhxkghchr`
+2. Verify: `cat supabase/.temp/project-ref` (should show `nsmositomvtlhxkghchr`)
+3. Create migration: `npx supabase migration new <name>`
+4. Push to DEV: `npx supabase db push`
+5. Test locally and on preview deployment
+6. Commit migration file with code
+
+**After merge to main:**
+1. Link to PROD: `npx supabase link --project-ref ynxmkbpdnucrbjyvovpq`
+2. Verify: `cat supabase/.temp/project-ref` (should show `ynxmkbpdnucrbjyvovpq`)
+3. Push to PROD: `npx supabase db push`
 
 ## Testing
 

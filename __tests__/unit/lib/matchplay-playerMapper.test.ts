@@ -122,6 +122,95 @@ describe('mapMatchPlayPlayers', () => {
     expect(result[0].name).toBe('Active Player');
   });
 
+  it('filters out inactive players based on tournamentPlayer status', () => {
+    const players: MatchPlayPlayer[] = [
+      {
+        playerId: 1,
+        name: 'Active Player',
+        status: 'active',
+        ifpaId: 100,
+        claimedBy: null,
+        tournamentPlayer: { status: 'active', seed: 0, pointsAdjustment: 0 },
+      },
+      {
+        playerId: 2,
+        name: 'Inactive Player',
+        status: 'active', // top-level status might still be active
+        ifpaId: 200,
+        claimedBy: null,
+        tournamentPlayer: { status: 'inactive', seed: 1, pointsAdjustment: 0 },
+      },
+    ];
+
+    const result = mapMatchPlayPlayers(players);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Active Player');
+  });
+
+  it('reassigns consecutive seeds when inactive players create gaps', () => {
+    // Simulates tournament 224913 scenario: 27 players, 3 inactive
+    const players: MatchPlayPlayer[] = [
+      {
+        playerId: 1,
+        name: 'Seed 1',
+        status: 'active',
+        ifpaId: null,
+        claimedBy: null,
+        tournamentPlayer: { status: 'active', seed: 0, pointsAdjustment: 0 },
+      },
+      {
+        playerId: 2,
+        name: 'Seed 2',
+        status: 'active',
+        ifpaId: null,
+        claimedBy: null,
+        tournamentPlayer: { status: 'active', seed: 1, pointsAdjustment: 0 },
+      },
+      {
+        playerId: 3,
+        name: 'Inactive at seed 3',
+        status: 'active',
+        ifpaId: null,
+        claimedBy: null,
+        tournamentPlayer: { status: 'inactive', seed: 2, pointsAdjustment: 0 },
+      },
+      {
+        playerId: 4,
+        name: 'Was seed 4, now seed 3',
+        status: 'active',
+        ifpaId: null,
+        claimedBy: null,
+        tournamentPlayer: { status: 'active', seed: 3, pointsAdjustment: 0 },
+      },
+      {
+        playerId: 5,
+        name: 'Inactive at seed 5',
+        status: 'active',
+        ifpaId: null,
+        claimedBy: null,
+        tournamentPlayer: { status: 'inactive', seed: 4, pointsAdjustment: 0 },
+      },
+      {
+        playerId: 6,
+        name: 'Was seed 6, now seed 4',
+        status: 'active',
+        ifpaId: null,
+        claimedBy: null,
+        tournamentPlayer: { status: 'active', seed: 5, pointsAdjustment: 0 },
+      },
+    ];
+
+    const result = mapMatchPlayPlayers(players);
+
+    expect(result).toHaveLength(4);
+    // Seeds should be consecutive 1, 2, 3, 4 - not 1, 2, 4, 6
+    expect(result[0]).toMatchObject({ name: 'Seed 1', seed: 1 });
+    expect(result[1]).toMatchObject({ name: 'Seed 2', seed: 2 });
+    expect(result[2]).toMatchObject({ name: 'Was seed 4, now seed 3', seed: 3 });
+    expect(result[3]).toMatchObject({ name: 'Was seed 6, now seed 4', seed: 4 });
+  });
+
   it('sorts players by seed', () => {
     const players: MatchPlayPlayer[] = [
       {

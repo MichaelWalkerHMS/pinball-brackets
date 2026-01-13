@@ -42,12 +42,12 @@ export interface MatchPlayTournamentWithPlayers extends MatchPlayTournament {
 export interface MatchPlayPlayer {
   playerId: number;
   name: string;
-  status: 'active' | 'withdrawn' | 'eliminated';
+  status: 'active' | 'inactive' | 'withdrawn' | 'eliminated';
   ifpaId: number | null;
   claimedBy: number | null; // User ID who claimed this player profile
   // Tournament-specific player info (when fetched with includePlayers=true)
   tournamentPlayer?: {
-    status: 'active' | 'withdrawn' | 'eliminated';
+    status: 'active' | 'inactive' | 'withdrawn' | 'eliminated';
     seed: number | null;
     pointsAdjustment: number;
   };

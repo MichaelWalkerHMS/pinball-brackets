@@ -13,8 +13,13 @@ export interface MappedPlayer {
 /**
  * Map Match Play player data to our internal format
  *
+ * Filters to only active players with valid seeds, then reassigns consecutive
+ * seeds (1, 2, 3...) based on their original seed order. This handles the case
+ * where tournament organizers mark players as inactive (dropouts), leaving gaps
+ * in the original seeding.
+ *
  * @param players - Array of Match Play player objects
- * @returns Array of mapped player objects sorted by seed
+ * @returns Array of mapped player objects with consecutive seeds starting at 1
  */
 export function mapMatchPlayPlayers(players: MatchPlayPlayer[]): MappedPlayer[] {
   // Filter to only active players with valid seeds
@@ -26,15 +31,19 @@ export function mapMatchPlayPlayers(players: MatchPlayPlayer[]): MappedPlayer[] 
     return status === "active" && seed !== null && seed !== undefined;
   });
 
-  // Map to our format and convert from 0-indexed to 1-indexed seeds
-  return activePlayers
-    .map((p) => ({
-      name: p.name,
-      seed: (p.tournamentPlayer!.seed as number) + 1, // Convert 0-indexed to 1-indexed
-      matchplay_id: String(p.playerId),
-      ifpa_id: p.ifpaId,
-    }))
-    .sort((a, b) => a.seed - b.seed);
+  // Sort by original Match Play seed to preserve relative ordering
+  activePlayers.sort(
+    (a, b) => (a.tournamentPlayer!.seed as number) - (b.tournamentPlayer!.seed as number)
+  );
+
+  // Map to our format with reassigned consecutive seeds (1, 2, 3...)
+  // This fills gaps left by inactive/withdrawn players
+  return activePlayers.map((p, index) => ({
+    name: p.name,
+    seed: index + 1, // Consecutive seed based on sorted position
+    matchplay_id: String(p.playerId),
+    ifpa_id: p.ifpaId,
+  }));
 }
 
 /**

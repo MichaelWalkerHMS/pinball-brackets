@@ -3,6 +3,7 @@ import SettingsButton from "./SettingsButton";
 import AuthHeader from "./AuthHeader";
 import MobileAuthHeader from "./MobileAuthHeader";
 import MobileNav from "./MobileNav";
+import FeedbackButton from "./FeedbackButton";
 
 export default async function ResponsiveHeader() {
   return (
@@ -10,6 +11,7 @@ export default async function ResponsiveHeader() {
       {/* Desktop navigation - hidden on mobile */}
       <div className="hidden sm:flex items-center gap-2">
         <NavLinks />
+        <FeedbackButton variant="desktop" />
         <SettingsButton />
         <AuthHeader />
       </div>

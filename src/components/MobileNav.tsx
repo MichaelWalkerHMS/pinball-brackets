@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { NAV_LINKS } from "@/lib/constants/navigation";
+import FeedbackButton from "./FeedbackButton";
 
 interface MobileNavProps {
   children: React.ReactNode; // Receives auth header content (server component)
@@ -88,6 +89,7 @@ export default function MobileNav({ children }: MobileNavProps) {
                 {link.label}
               </Link>
             ))}
+            <FeedbackButton variant="mobile" />
           </nav>
 
           {/* Auth section - receives server-rendered AuthHeader */}

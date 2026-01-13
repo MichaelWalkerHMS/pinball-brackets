@@ -164,6 +164,15 @@ export interface SeedingChangeLog {
   created_at: string;
 }
 
+// Feedback types
+
+export interface Feedback {
+  id: string;
+  message: string;
+  page_url: string | null;
+  created_at: string;
+}
+
 // Dashboard types
 
 export interface DashboardBracket {

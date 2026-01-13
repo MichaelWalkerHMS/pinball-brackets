@@ -32,6 +32,12 @@ export default async function AdminLayout({
                 >
                   Tournaments
                 </Link>
+                <Link
+                  href="/admin/feedback"
+                  className="text-[rgb(var(--color-text-secondary))] hover:text-[rgb(var(--color-text-primary))] text-sm font-medium"
+                >
+                  Feedback
+                </Link>
               </nav>
             </div>
 

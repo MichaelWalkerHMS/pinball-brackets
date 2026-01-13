@@ -45,9 +45,6 @@ npm-debug.log*
 # Manual testing screenshots
 testing/
 
-# Future Feature Plans
-feature-plans/
-
 # Project Planning & Review Documents
 mobile-project-plan.md
 mobile-pr*.md

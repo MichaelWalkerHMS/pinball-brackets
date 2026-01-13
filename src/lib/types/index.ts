@@ -193,3 +193,23 @@ export interface DashboardBracket {
   rank: number | null;
   is_locked: boolean;
 }
+
+// CMS Content types
+
+export interface SiteContent {
+  id: string;
+  page_slug: string;
+  title: string;
+  content: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}

@@ -30,9 +30,10 @@ test.describe('Feedback System', () => {
     await expect(page.getByRole('heading', { name: 'Send Anonymous Feedback' })).toBeVisible()
 
     // Should have textarea and buttons
+    const dialog = page.getByRole('dialog')
     await expect(page.getByLabel('Your Message')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Send Feedback' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Send Feedback' })).toBeVisible()
   })
 
   test('modal can be closed with cancel button', async ({ page }) => {
@@ -71,17 +72,18 @@ test.describe('Feedback System', () => {
     // Open modal
     await openMobileMenuIfNeeded(page)
     await page.getByRole('button', { name: /feedback/i }).click()
-    await expect(page.getByRole('dialog')).toBeVisible()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
 
     // Leave message empty
     await page.getByLabel('Your Message').fill('')
 
     // Submit button should be disabled
-    await expect(page.getByRole('button', { name: 'Send Feedback' })).toBeDisabled()
+    await expect(dialog.getByRole('button', { name: 'Send Feedback' })).toBeDisabled()
 
     // Also test whitespace-only
     await page.getByLabel('Your Message').fill('   ')
-    await expect(page.getByRole('button', { name: 'Send Feedback' })).toBeDisabled()
+    await expect(dialog.getByRole('button', { name: 'Send Feedback' })).toBeDisabled()
   })
 
   test('can submit valid feedback and see success state', async ({ page }) => {
@@ -90,14 +92,15 @@ test.describe('Feedback System', () => {
     // Open modal
     await openMobileMenuIfNeeded(page)
     await page.getByRole('button', { name: /feedback/i }).click()
-    await expect(page.getByRole('dialog')).toBeVisible()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
 
     // Enter valid feedback message
     const feedbackMessage = `E2E test feedback submission - ${Date.now()}`
     await page.getByLabel('Your Message').fill(feedbackMessage)
 
     // Submit button should be enabled
-    const submitButton = page.getByRole('button', { name: 'Send Feedback' })
+    const submitButton = dialog.getByRole('button', { name: 'Send Feedback' })
     await expect(submitButton).toBeEnabled()
 
     // Submit the feedback

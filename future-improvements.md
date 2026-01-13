@@ -333,6 +333,71 @@ Non-blocking - the indicator displays correctly for mouse users. This is an acce
 
 ---
 
+### [LOW] Add E2E Tests for Admin CMS
+**Added:** 2026-01-12 | **Source:** PR #TBD (feature/admin-cms) / Code Review
+**Area:** Testing
+**Files:** New file needed: `e2e/admin-content.spec.ts`
+
+**Current Behavior:**
+The admin CMS feature has no E2E tests covering the user journeys for editing pages and managing FAQ items.
+
+**Suggested Improvement:**
+Add Playwright E2E tests covering:
+1. Navigate to admin content dashboard
+2. Edit markdown page content (About, Privacy, Changelog)
+3. Preview rendered markdown
+4. Add/edit/delete FAQ items
+5. Reorder FAQ items
+6. Verify changes appear on public pages
+
+**Why Deferred:**
+Non-blocking - feature works correctly. E2E tests would add confidence for future changes but the admin CMS is a lower-traffic feature.
+
+---
+
+### [LOW] Add Content Length Validation to CMS Server Actions
+**Added:** 2026-01-12 | **Source:** PR #TBD (feature/admin-cms) / Code Review
+**Area:** Security, UX
+**Files:** `src/app/admin/content/actions.ts`
+
+**Current Behavior:**
+The `updatePageContent` and FAQ server actions accept content without length limits. Very large content submissions could cause issues.
+
+**Code Context:**
+```typescript
+// src/app/admin/content/actions.ts
+export async function updatePageContent(
+  slug: string,
+  title: string,
+  content: string  // No length validation
+): Promise<{ success?: boolean; error?: string }> {
+```
+
+**Suggested Improvement:**
+Add reasonable content length limits (e.g., 100KB for page content, 10KB for FAQ answers).
+
+**Suggested Fix:**
+```typescript
+const MAX_PAGE_CONTENT_LENGTH = 100_000; // 100KB
+const MAX_FAQ_ANSWER_LENGTH = 10_000;    // 10KB
+
+export async function updatePageContent(
+  slug: string,
+  title: string,
+  content: string
+): Promise<{ success?: boolean; error?: string }> {
+  if (content.length > MAX_PAGE_CONTENT_LENGTH) {
+    return { error: `Content exceeds maximum length of ${MAX_PAGE_CONTENT_LENGTH} characters` };
+  }
+  // ... rest of function
+}
+```
+
+**Why Deferred:**
+Non-blocking - only admins can submit content, and admins are trusted. This is a defense-in-depth measure.
+
+---
+
 ## Completed Items
 
 Move items here when they've been addressed, with a note about which PR fixed them.

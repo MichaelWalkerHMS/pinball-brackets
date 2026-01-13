@@ -1,3 +1,221 @@
+# PR Review - Admin CMS for Static Pages
+
+**Review Date:** 2026-01-12
+**Branch:** feature/admin-cms
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR adds an admin CMS for managing static pages (About, Privacy, Changelog) and FAQ content. The implementation includes new database tables with proper RLS policies, a markdown editor with live preview, a structured FAQ editor with reorder functionality, and updated public pages that render content from the database using react-markdown. Overall, this is a well-designed feature with good security practices, but there are two issues that need to be addressed before merging.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+#### 1. next-env.d.ts Modification Should Not Be Committed
+
+**File:** `next-env.d.ts` (line 3)
+
+**Issue:**
+The diff shows a change from `.next/dev/types/routes.d.ts` to `.next/types/routes.d.ts`. This is an auto-generated file managed by Next.js that should not be committed.
+
+**Why it matters:**
+This file header explicitly states "This file should not be edited." Committing changes causes unnecessary merge conflicts and isn't a real code change. This has been a recurring issue flagged in multiple previous reviews and is documented in `coding-standards.md`.
+
+**Suggested fix:**
+Revert this change before committing:
+```bash
+git checkout main -- next-env.d.ts
+```
+
+---
+
+#### 2. Missing Barrel Export for Content Library
+
+**File:** `src/lib/content/index.ts`
+
+**Issue:**
+While the content library has an index.ts file, it's not being re-exported from the main lib barrel export (if one exists), and the actions file in `src/app/admin/content/actions.ts` imports types directly from `@/lib/types` rather than from a consolidated content module export.
+
+This is minor since the current approach works, but it's worth noting for consistency. The new module follows the barrel export pattern for its own directory, which is good.
+
+**Why it matters:**
+Minor inconsistency with the "Barrel Exports for Library Directories" coding standard. The current implementation is acceptable.
+
+**Status:** No blocking action required - current implementation is acceptable.
+
+---
+
+#### 3. Duplicate Disclaimer Content in About Page
+
+**File:** `src/app/about/page.tsx` (lines 33-39) and `supabase/migrations/20260112212008_add_site_content_cms.sql` (seeded content)
+
+**Issue:**
+The About page has a hardcoded "Disclaimer" section that is always displayed, but the seeded markdown content in the migration also includes a "## Disclaimer" section. This creates potential for duplicate or conflicting disclaimer content.
+
+**Why it matters:**
+If an admin edits the About page content and changes the disclaimer section in the markdown, users will see both the hardcoded disclaimer AND any disclaimer text in the markdown content.
+
+**Suggested fix:**
+Either:
+1. Remove the disclaimer from the seeded markdown content (since it's always shown via hardcode), OR
+2. Remove the hardcoded disclaimer section and rely on the markdown content
+
+---
+
+### 🔵 Low
+
+#### 1. Missing E2E Tests for New Feature
+
+**Issue:**
+Per CLAUDE.md, new features should include E2E tests for the user journey. The admin CMS feature doesn't include any E2E tests.
+
+**Why it matters:**
+E2E tests help ensure the feature works correctly in the browser and catches regressions.
+
+**Suggested fix (can be deferred):**
+Add E2E tests covering:
+- Admin can view content dashboard
+- Admin can edit and save page content
+- Admin can add/edit/delete/reorder FAQ items
+- Non-admin users cannot access admin content pages
+
+---
+
+#### 2. Potentially Large Textarea Content Not Validated
+
+**File:** `src/app/admin/content/actions.ts` (lines 38-42)
+
+**Issue:**
+The `updatePageContent` server action accepts `title` and `content` parameters without any validation on length or content. Very large content could cause performance issues.
+
+**Why it matters:**
+Minor security/performance consideration. The RLS policies ensure only admins can update, but there's no validation on content size.
+
+**Suggested enhancement (optional):**
+Consider adding basic validation:
+```typescript
+if (content.length > 100000) {
+  return { error: "Content too large" };
+}
+```
+
+---
+
+### 🟢 Praise
+
+#### Excellent RLS Policy Design
+
+**File:** `supabase/migrations/20260112212008_add_site_content_cms.sql` (lines 32-72)
+
+The RLS policies are well-designed:
+- Public read access for both tables (appropriate for public content)
+- Admin-only write access using the existing `public.is_admin()` function
+- Separate policies for INSERT, UPDATE, DELETE operations on FAQ items
+- Proper grants aligned with policies
+
+This follows security best practices.
+
+#### Clean Server Actions Pattern
+
+**File:** `src/app/admin/content/actions.ts`
+
+The server actions are well-structured:
+- Centralized `requireAdmin()` function for consistent auth checking
+- Clear return types with discriminated unions (`{ success?: boolean; error?: string }`)
+- Proper path revalidation for both admin and public pages
+- Good error logging with `console.error`
+
+#### Well-Designed MarkdownRenderer Component
+
+**File:** `src/components/MarkdownRenderer.tsx`
+
+The component correctly:
+- Uses CSS variables for all colors (follows coding standard)
+- Handles external links properly with `target="_blank"` and `rel="noopener noreferrer"`
+- Distinguishes between inline and block code
+- Provides consistent styling that matches the site theme
+
+#### Proper CSS Variable Usage Throughout
+
+All new components consistently use CSS variables for styling:
+- `rgb(var(--color-text-primary))` for text
+- `rgb(var(--color-bg-primary))` for backgrounds
+- `rgb(var(--color-accent-primary))` for interactive elements
+- etc.
+
+This follows the established "Use CSS Variables for Colors" coding standard perfectly.
+
+#### Good UX in ContentEditor
+
+**File:** `src/app/admin/content/[slug]/ContentEditor.tsx`
+
+- Dirty state tracking with `isDirty` comparison
+- Save button disabled when no changes
+- Success message auto-clears after 3 seconds
+- Live preview toggle between edit and preview modes
+- Clear labels and helper text for markdown support
+
+#### FAQ Editor with Reorder Functionality
+
+**File:** `src/app/admin/content/faq/FAQEditor.tsx`
+
+Well-implemented FAQ management:
+- Inline editing with expand/collapse
+- Move up/down buttons for reordering
+- Add new FAQ form with validation
+- Delete confirmation with browser confirm()
+- Markdown preview for answers
+
+#### Well-Documented Migration
+
+**File:** `supabase/migrations/20260112212008_add_site_content_cms.sql`
+
+The migration includes:
+- Clear comment at top explaining purpose
+- Appropriate indexes for common query patterns
+- Seed data that migrates existing hardcoded content
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** CHANGES_REQUESTED
+
+Two issues should be addressed before merge:
+
+1. **Revert next-env.d.ts** - This auto-generated file change should not be committed (MEDIUM)
+2. **Fix duplicate disclaimer** - Either remove from seeded content or remove hardcoded section to avoid duplicate content (MEDIUM)
+
+The implementation is solid, well-secured with proper RLS policies, and follows coding standards for CSS variables. Once these issues are addressed, this is ready to merge.
+
+---
+
+---
+
 # PR Review - MatchPlay Indicator Component (Iteration 2 - APPROVED)
 
 **Review Date:** 2026-01-12

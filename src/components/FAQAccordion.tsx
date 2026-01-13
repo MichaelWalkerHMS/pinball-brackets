@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
-
-interface FAQItem {
-  question: string;
-  answer: string | React.ReactNode;
-}
+import MarkdownRenderer from "@/components/MarkdownRenderer";
+import type { FAQItem } from "@/lib/types";
 
 interface FAQAccordionProps {
   items: FAQItem[];
 }
 
-function FAQAccordionItem({ question, answer }: FAQItem) {
+function FAQAccordionItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -35,10 +32,12 @@ function FAQAccordionItem({ question, answer }: FAQItem) {
       </button>
       <div
         className={`overflow-hidden transition-all duration-200 ${
-          isOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+          isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="p-4 pt-0 text-[rgb(var(--color-text-secondary))]">{answer}</div>
+        <div className="p-4 pt-0">
+          <MarkdownRenderer content={answer} />
+        </div>
       </div>
     </div>
   );
@@ -47,8 +46,8 @@ function FAQAccordionItem({ question, answer }: FAQItem) {
 export default function FAQAccordion({ items }: FAQAccordionProps) {
   return (
     <div className="space-y-3">
-      {items.map((item, index) => (
-        <FAQAccordionItem key={index} question={item.question} answer={item.answer} />
+      {items.map((item) => (
+        <FAQAccordionItem key={item.id} question={item.question} answer={item.answer} />
       ))}
     </div>
   );

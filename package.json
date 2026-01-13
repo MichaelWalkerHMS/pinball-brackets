@@ -9,6 +9,8 @@
     "lint": "next lint",
     "seed": "tsx src/scripts/seed-dev-data.ts",
     "seed:prod": "tsx src/scripts/seed-dev-data.ts .env.prod",
+    "import-states": "tsx src/scripts/import-state-tournaments.ts",
+    "import-states:dry": "tsx src/scripts/import-state-tournaments.ts --dry-run",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

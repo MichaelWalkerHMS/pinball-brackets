@@ -16,7 +16,7 @@ nul
 # Miscellaneous Files
 IFPA State Championship Rules.md
 e2e-failures.log
-scripts/
+/scripts/
 
 # ===========================================
 # Node.js / Next.js
@@ -56,3 +56,7 @@ playwright/.cache/
 
 # UI reference screenshots
 ui-changes/
+
+# Tournament import CSV files (contain tournament data, not code)
+feature-plans/add-states/*.csv
+feature-plans/add-states/.~lock.*

@@ -281,6 +281,58 @@ Non-blocking - purely cosmetic. Both versions work identically. Some teams prefe
 
 ---
 
+### [LOW] Add Keyboard Accessibility to MatchPlayIndicator Tooltip
+**Added:** 2026-01-12 | **Source:** PR #49 / Code Review
+**Area:** Accessibility, UX
+**Files:** `src/components/bracket/MatchPlayIndicator.tsx` (lines 12-35)
+
+**Current Behavior:**
+The tooltip is only visible on hover (via CSS `group-hover:block`). Keyboard users cannot access the tooltip content, and screen readers have no association between the indicator and its tooltip.
+
+**Code Context:**
+```tsx
+// Current implementation (lines 12-35)
+<div className="relative group flex items-center gap-1.5">
+  <span className={`inline-block w-2.5 h-2.5 rounded-full ...`} aria-hidden="true" />
+  <span className={`text-xs whitespace-nowrap ...`}>
+    {isLinked ? "MatchPlay Linked" : "MatchPlay Not Linked"}
+  </span>
+  <div className="absolute left-0 top-full mt-1.5 hidden group-hover:block z-10 ...">
+    {tooltipText}
+  </div>
+</div>
+```
+
+**Suggested Improvement:**
+Add `tabIndex={0}` to make the element focusable, add `group-focus:block` to show tooltip on focus, and add ARIA attributes for screen reader support.
+
+**Suggested Fix:**
+```tsx
+<div
+  className="relative group flex items-center gap-1.5"
+  tabIndex={0}
+  role="status"
+  aria-describedby="matchplay-tooltip"
+>
+  <span className={`inline-block w-2.5 h-2.5 rounded-full ...`} aria-hidden="true" />
+  <span className={`text-xs whitespace-nowrap ...`}>
+    {isLinked ? "MatchPlay Linked" : "MatchPlay Not Linked"}
+  </span>
+  <div
+    id="matchplay-tooltip"
+    role="tooltip"
+    className="absolute left-0 top-full mt-1.5 hidden group-hover:block group-focus:block z-10 ..."
+  >
+    {tooltipText}
+  </div>
+</div>
+```
+
+**Why Deferred:**
+Non-blocking - the indicator displays correctly for mouse users. This is an accessibility enhancement for keyboard navigation and screen reader users.
+
+---
+
 ## Completed Items
 
 Move items here when they've been addressed, with a note about which PR fixed them.

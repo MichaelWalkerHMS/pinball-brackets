@@ -64,7 +64,11 @@ See `coding-standards.md` for established code patterns and conventions. All cod
 
 4. Maximum 5 review iterations. If unresolved, escalate.
 
-5. **Log deferred findings:** Non-blocking suggestions you choose NOT to fix go in `future-improvements.md`. But prefer fixing issues while context is fresh.
+5. **REQUIRED: Log ALL deferred findings to `future-improvements.md`.**
+   - Any LOW or MEDIUM severity suggestion you choose NOT to fix MUST be added to `future-improvements.md`
+   - Use the format documented in that file (severity, date, area, files, current behavior, suggested fix, why deferred)
+   - This is NOT optional — deferred findings that aren't logged are lost context
+   - Prefer fixing issues while context is fresh, but always log what you defer
 
 **Never push code that hasn't been approved by the review subagent.**
 

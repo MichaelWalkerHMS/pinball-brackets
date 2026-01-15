@@ -7,14 +7,20 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Pinball Brackets",
-  description: "Think you know who will win the IFPA State Championship this year? Prove it by making free March Madness-style brackets!",
+  description: "Create free March-Madness style prediction brackets for your state's IFPA Open and Women's Championships!",
   metadataBase: new URL("https://www.pinballbrackets.com"),
   openGraph: {
     title: "Pinball Brackets",
-    description: "Think you know who will win the IFPA State Championship this year? Prove it by making free March Madness-style brackets!",
+    description: "Create free March-Madness style prediction brackets for your state's IFPA Open and Women's Championships!",
     url: "https://www.pinballbrackets.com",
     siteName: "Pinball Brackets",
     images: [
+      {
+        url: "/pinball-bracket-logo-expanded.png",
+        width: 1200,
+        height: 630,
+        alt: "Pinball Brackets",
+      },
       {
         url: "/logo.png",
         alt: "Pinball Brackets",
@@ -25,8 +31,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Pinball Brackets",
-    description: "Think you know who will win the IFPA State Championship this year? Prove it by making free March Madness-style brackets!",
-    images: ["/logo.png"],
+    description: "Create free March-Madness style prediction brackets for your state's IFPA Open and Women's Championships!",
+    images: ["/pinball-bracket-logo-expanded.png"],
   },
 };
 

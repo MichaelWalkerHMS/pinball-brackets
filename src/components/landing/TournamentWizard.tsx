@@ -85,14 +85,14 @@ export default function TournamentWizard({ tournaments }: TournamentWizardProps)
         <div className="flex-1 min-w-[180px]">
           <label className="block text-xs font-medium text-[rgb(var(--color-text-secondary))] mb-1">
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[rgb(var(--color-accent-primary))] text-white text-xs mr-1">1</span>
-            Select State
+            Select State/Province
           </label>
           <select
             value={selectedState}
             onChange={(e) => handleStateChange(e.target.value)}
             className="w-full px-3 py-2 border border-[rgb(var(--color-border-secondary))] rounded-lg bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))] focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:border-[rgb(var(--color-accent-primary))]"
           >
-            <option value="">Choose State...</option>
+            <option value="">Choose State/Province...</option>
             {states.map((state) => (
               <option key={state} value={state}>
                 {state}
@@ -125,7 +125,7 @@ export default function TournamentWizard({ tournaments }: TournamentWizardProps)
                 ? filteredTournaments.length > 0
                   ? "Select tournament..."
                   : "No open tournaments"
-                : "Select a state first"}
+                : "Select a state/province first"}
             </option>
             {filteredTournaments.map((tournament) => (
               <option key={tournament.id} value={tournament.id}>

@@ -21,10 +21,6 @@ export const metadata: Metadata = {
         height: 630,
         alt: "Pinball Brackets",
       },
-      {
-        url: "/logo.png",
-        alt: "Pinball Brackets",
-      },
     ],
     type: "website",
   },

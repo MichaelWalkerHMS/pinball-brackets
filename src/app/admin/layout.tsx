@@ -2,6 +2,7 @@ import { requireAdmin } from "@/components/admin/AdminGuard";
 import { signOut } from "@/app/auth/actions";
 import Link from "next/link";
 import SettingsButton from "@/components/SettingsButton";
+import AdminMobileNav from "@/components/admin/AdminMobileNav";
 
 export default async function AdminLayout({
   children,
@@ -18,11 +19,13 @@ export default async function AdminLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Left side - Logo/Title */}
-            <div className="flex items-center gap-3 sm:gap-6">
+            <div className="flex items-center gap-1 sm:gap-6">
+              {/* Mobile hamburger menu */}
+              <AdminMobileNav />
               <Link href="/admin" className="flex items-center gap-2">
                 <span className="text-lg sm:text-xl font-bold">
-                  <span className="sm:hidden">Admin</span>
-                  <span className="hidden sm:inline">Admin Panel</span>
+                  <span className="md:hidden">Admin</span>
+                  <span className="hidden md:inline">Admin Panel</span>
                 </span>
               </Link>
               <nav className="hidden md:flex items-center gap-4">
@@ -53,10 +56,10 @@ export default async function AdminLayout({
               <span className="hidden sm:inline text-sm text-[rgb(var(--color-text-secondary))] truncate max-w-[150px]">
                 {profile.display_name || profile.email}
               </span>
-              {/* View Site - hide on mobile */}
+              {/* View Site - hide on mobile (available in hamburger menu) */}
               <Link
                 href="/"
-                className="hidden sm:inline text-sm text-[rgb(var(--color-accent-primary))] hover:text-[rgb(var(--color-accent-hover))]"
+                className="hidden md:inline text-sm text-[rgb(var(--color-accent-primary))] hover:text-[rgb(var(--color-accent-hover))]"
               >
                 View Site
               </Link>

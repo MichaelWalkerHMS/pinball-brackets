@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Tournament } from "@/lib/types";
 import BulkSyncButton from "@/components/admin/BulkSyncButton";
 import BulkPlayerSyncButton from "@/components/admin/BulkPlayerSyncButton";
+import UpcomingTournaments from "@/components/admin/UpcomingTournaments";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -58,11 +59,7 @@ export default async function AdminDashboard() {
       )}
 
       {upcoming.length > 0 && (
-        <TournamentSection
-          title="Upcoming"
-          tournaments={upcoming}
-          badgeColor="bg-[rgb(var(--color-accent-light))] text-[rgb(var(--color-accent-text))]"
-        />
+        <UpcomingTournaments tournaments={upcoming} />
       )}
 
       {completed.length > 0 && (

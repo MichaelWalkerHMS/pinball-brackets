@@ -59,7 +59,7 @@ export default function BulkSyncButton() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="font-medium text-[rgb(var(--color-text-primary))]">
-            Match Play Sync
+            Results Sync
           </h3>
           <p className="text-sm text-[rgb(var(--color-text-muted))] mt-1">
             Sync results for all tournaments linked to Match Play
@@ -108,7 +108,7 @@ export default function BulkSyncButton() {
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              Sync All
+              Sync All Results
             </>
           )}
         </button>

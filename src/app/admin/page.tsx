@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import type { Tournament } from "@/lib/types";
 import BulkSyncButton from "@/components/admin/BulkSyncButton";
+import BulkPlayerSyncButton from "@/components/admin/BulkPlayerSyncButton";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -41,8 +42,11 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      {/* Bulk Sync Button */}
-      <BulkSyncButton />
+      {/* Match Play Sync Section */}
+      <div className="mb-6 space-y-4">
+        <BulkPlayerSyncButton />
+        <BulkSyncButton />
+      </div>
 
       {/* Tournament Sections */}
       {inProgress.length > 0 && (

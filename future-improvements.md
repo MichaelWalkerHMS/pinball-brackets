@@ -398,6 +398,79 @@ Non-blocking - only admins can submit content, and admins are trusted. This is a
 
 ---
 
+### [MEDIUM] Add Unit Tests for Bulk Player Sync API Routes
+**Added:** 2026-01-15 | **Source:** PR #TBD (feature/bulk-player-sync) / Code Review
+**Area:** Testing
+**Files:**
+- `src/app/api/matchplay/bulk-players-preview/route.ts`
+- `src/app/api/matchplay/bulk-players-apply/route.ts`
+
+**Current Behavior:**
+The new bulk player sync API routes have no unit tests. They perform critical database operations (deleting and inserting players) that should be tested.
+
+**Suggested Improvement:**
+Add unit tests in `__tests__/unit/api/` covering:
+- Authentication and authorization checks
+- Request body validation
+- Error handling for various failure modes
+- Correct re-validation against Match Play API
+- Seeding change log entries when brackets exist
+
+**Why Deferred:**
+Non-blocking - the API routes follow established patterns and have been manually tested. Unit tests would add confidence but the core functionality is proven by integration.
+
+---
+
+### [LOW] Add E2E Tests for Bulk Player Sync Wizard
+**Added:** 2026-01-15 | **Source:** PR #TBD (feature/bulk-player-sync) / Code Review
+**Area:** Testing
+**Files:** New file needed: `e2e/admin-bulk-player-sync.spec.ts`
+
+**Current Behavior:**
+The bulk player sync feature has no E2E tests covering the multi-phase wizard UI.
+
+**Suggested Improvement:**
+Add Playwright E2E tests covering:
+1. Admin can initiate bulk player sync
+2. Progress indicators display correctly during fetching
+3. Review modal shows diff correctly
+4. Accept/Skip functionality works
+5. Apply all completes successfully
+
+**Why Deferred:**
+Non-blocking - feature works correctly. E2E tests would catch UI regressions but the wizard follows patterns from the existing codebase.
+
+---
+
+### [LOW] Extract TournamentPreview Interface to Shared Types
+**Added:** 2026-01-15 | **Source:** PR #TBD (feature/bulk-player-sync) / Code Review
+**Area:** Code Quality, Maintainability
+**Files:**
+- `src/components/admin/BulkPlayerSyncButton.tsx` (lines 8-20)
+- `src/app/api/matchplay/bulk-players-preview/route.ts` (lines 11-23)
+
+**Current Behavior:**
+The `TournamentPreview` interface is duplicated between the component and the API route.
+
+**Suggested Improvement:**
+Create a shared type in `src/lib/matchplay/index.ts` or `src/lib/types.ts`:
+```typescript
+export interface TournamentPreviewResponse {
+  tournament: { id: string; name: string; matchplay_id: string };
+  players: MappedPlayer[];
+  diff: PlayerDiff | null;
+  hasChanges: boolean;
+  bracketCount: number;
+  existingCount: number;
+  error?: string;
+}
+```
+
+**Why Deferred:**
+Non-blocking - both interfaces are identical and work correctly. This is a maintainability improvement for future changes.
+
+---
+
 ## Completed Items
 
 Move items here when they've been addressed, with a note about which PR fixed them.

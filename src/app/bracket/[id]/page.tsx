@@ -61,11 +61,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       type: "website",
+      images: [
+        {
+          url: "/pinball-bracket-logo-expanded.png",
+          width: 1200,
+          height: 630,
+          alt: "Pinball Brackets",
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: ["/pinball-bracket-logo-expanded.png"],
     },
   };
 }

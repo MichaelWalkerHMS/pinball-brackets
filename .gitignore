@@ -60,3 +60,5 @@ ui-changes/
 # Tournament import CSV files (contain tournament data, not code)
 feature-plans/add-states/*.csv
 feature-plans/add-states/.~lock.*
+# Database backups
+backups/

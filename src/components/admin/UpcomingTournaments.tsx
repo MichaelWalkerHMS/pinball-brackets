@@ -30,34 +30,18 @@ export default function UpcomingTournaments({ tournaments }: UpcomingTournaments
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[rgb(var(--color-text-primary))]">Upcoming</h2>
         {states.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-[rgb(var(--color-text-muted))]">Filter:</span>
-            <div className="flex gap-1 flex-wrap">
-              <button
-                onClick={() => setSelectedState("all")}
-                className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                  selectedState === "all"
-                    ? "bg-[rgb(var(--color-accent-primary))] text-white"
-                    : "bg-[rgb(var(--color-bg-secondary))] text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-bg-tertiary))]"
-                }`}
-              >
-                All
-              </button>
-              {states.map((state) => (
-                <button
-                  key={state}
-                  onClick={() => setSelectedState(state)}
-                  className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                    selectedState === state
-                      ? "bg-[rgb(var(--color-accent-primary))] text-white"
-                      : "bg-[rgb(var(--color-bg-secondary))] text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-bg-tertiary))]"
-                  }`}
-                >
-                  {state}
-                </button>
-              ))}
-            </div>
-          </div>
+          <select
+            value={selectedState}
+            onChange={(e) => setSelectedState(e.target.value)}
+            className="px-3 py-1.5 text-sm rounded-lg border border-[rgb(var(--color-border-primary))] bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))]"
+          >
+            <option value="all">All States</option>
+            {states.map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
+          </select>
         )}
       </div>
 

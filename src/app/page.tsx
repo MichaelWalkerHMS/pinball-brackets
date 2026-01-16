@@ -14,10 +14,17 @@ export default async function Home() {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch tournaments
-  const { data: tournaments, error } = await supabase
+  // Fetch tournaments with results count to determine lock status
+  const { data: tournamentsRaw, error } = await supabase
     .from("tournaments")
-    .select("*");
+    .select("*, results(count)");
+
+  // Transform to add has_results boolean
+  const tournaments = tournamentsRaw?.map((t) => ({
+    ...t,
+    has_results: (t.results?.[0]?.count ?? 0) > 0,
+    results: undefined, // Remove the raw results array
+  })) as Tournament[] | null;
 
   // Fetch user brackets if logged in
   const userBrackets = user ? await loadUserBrackets() : [];

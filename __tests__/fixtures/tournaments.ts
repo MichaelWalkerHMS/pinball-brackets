@@ -5,7 +5,6 @@ export const mockTournament: Tournament = {
   name: 'Test Tournament 2026',
   state: 'MI',
   year: 2026,
-  lock_date: '2026-01-15T12:00:00Z',
   start_date: '2026-01-17T09:00:00Z',
   end_date: '2026-01-17T18:00:00Z',
   player_count: 24,
@@ -22,20 +21,21 @@ export const mockTournament: Tournament = {
   matchplay_id: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+  has_results: false,
 }
 
-// Tournament that is locked (lock_date in the past)
+// Tournament that is locked (has results)
 export const mockLockedTournament: Tournament = {
   ...mockTournament,
   id: 'test-tournament-locked',
   name: 'Locked Tournament',
-  lock_date: '2020-01-01T00:00:00Z',
+  has_results: true,
 }
 
-// Tournament that is still open (lock_date in the future)
+// Tournament that is still open (no results)
 export const mockOpenTournament: Tournament = {
   ...mockTournament,
   id: 'test-tournament-open',
   name: 'Open Tournament',
-  lock_date: '2030-01-01T00:00:00Z',
+  has_results: false,
 }

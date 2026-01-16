@@ -29,11 +29,11 @@ export default function TournamentWizard({ tournaments }: TournamentWizardProps)
     return Array.from(stateSet).sort();
   }, [tournaments]);
 
-  // Filter tournaments by selected state, only show unlocked ones
+  // Filter tournaments by selected state, only show unlocked ones (no results yet)
   const filteredTournaments = useMemo(() => {
     if (!selectedState) return [];
     return tournaments.filter(
-      (t) => t.state === selectedState && new Date(t.lock_date) > new Date()
+      (t) => t.state === selectedState && !t.has_results
     );
   }, [tournaments, selectedState]);
 

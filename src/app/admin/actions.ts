@@ -73,7 +73,6 @@ export async function createTournament(data: TournamentFormData) {
     name: data.name,
     state: data.state,
     year: data.year,
-    lock_date: new Date(data.lock_date).toISOString(),
     start_date: new Date(data.start_date).toISOString(),
     end_date: new Date(data.end_date).toISOString(),
     player_count: data.player_count,
@@ -127,9 +126,6 @@ export async function updateTournament(
   if (data.matchplay_id !== undefined)
     updateData.matchplay_id = data.matchplay_id || null;
 
-  if (data.lock_date !== undefined) {
-    updateData.lock_date = new Date(data.lock_date).toISOString();
-  }
   if (data.start_date !== undefined) {
     updateData.start_date = new Date(data.start_date).toISOString();
   }

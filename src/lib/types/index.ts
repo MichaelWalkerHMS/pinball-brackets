@@ -5,7 +5,6 @@ export interface Tournament {
   name: string;
   state: string;
   year: number;
-  lock_date: string;
   start_date: string;
   end_date: string;
   player_count: number;
@@ -16,6 +15,7 @@ export interface Tournament {
   matchplay_id: string | null;
   created_at: string;
   updated_at: string;
+  has_results?: boolean; // Computed field for filtering (true when tournament has any results)
 }
 
 export interface ScoringConfig {
@@ -137,7 +137,6 @@ export interface TournamentFormData {
   name: string;
   state: string;
   year: number;
-  lock_date: string;
   start_date: string;
   end_date: string;
   player_count: 16 | 24;
@@ -183,7 +182,6 @@ export interface DashboardBracket {
   tournament_state: string;
   tournament_year: number;
   player_count: number;
-  lock_date: string;
   tournament_status: 'upcoming' | 'in_progress' | 'completed';
   pick_count: number;
   expected_picks: number;

@@ -256,9 +256,6 @@ async function importTournament(
       ? new Date(mpData.startUtc)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    // Lock date = start date
-    const lockDate = startDate;
-
     // End date = start date + 10 hours
     const endDate = new Date(startDate.getTime() + 10 * 60 * 60 * 1000);
 
@@ -280,7 +277,6 @@ async function importTournament(
         name: tournamentName,
         state: row.state,
         year: 2025,
-        lock_date: lockDate.toISOString(),
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
         player_count: playerCount,

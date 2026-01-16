@@ -33,6 +33,7 @@ interface RoundProps {
   pickResultMap?: Map<string, PickResultInfo>; // key: "round-position", value: pick result info
   actualParticipantsMap?: Map<string, ActualParticipants>; // key: "round-position", value: actual participants
   subtotal?: { earned: number; max: number }; // Points earned / max for this round
+  hideSubtotal?: boolean; // Hide subtotal display (e.g., when viewing original predictions)
 }
 
 export default function Round({
@@ -47,6 +48,7 @@ export default function Round({
   pickResultMap,
   actualParticipantsMap,
   subtotal,
+  hideSubtotal,
 }: RoundProps) {
   // Get gap and padding from shared layout constants
   const getGapStyle = (): React.CSSProperties => {
@@ -72,8 +74,8 @@ export default function Round({
       <div className="text-center mb-2 pb-2 border-b border-[rgb(var(--color-border-primary))]">
         <h3 className="text-sm font-semibold text-[rgb(var(--color-text-primary))]">{roundName}</h3>
         <p className="text-xs text-[rgb(var(--color-text-muted))]">{matches.length} match{matches.length !== 1 ? 'es' : ''}</p>
-        {/* Round subtotal - only show when any picks have been scored */}
-        {hasAnyScored && subtotal && (
+        {/* Round subtotal - only show when any picks have been scored and not hidden */}
+        {hasAnyScored && subtotal && !hideSubtotal && (
           <p className="text-xs font-medium mt-1 text-[rgb(var(--color-text-secondary))]">
             {subtotal.earned}/{subtotal.max} pts
           </p>

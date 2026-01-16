@@ -94,6 +94,8 @@ export default function BracketView({
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // View mode toggle: 'results' shows result overlays, 'predictions' shows original picks
+  const [viewMode, setViewMode] = useState<'results' | 'predictions'>('results');
 
   const router = useRouter();
 
@@ -102,18 +104,24 @@ export default function BracketView({
     ? `${getBaseUrl()}/bracket/${bracketId}`
     : null;
 
+  // Check if we have any results to display (used for toggle visibility)
+  const hasAnyResults = results.length > 0;
+
   // Build result map for looking up actual winners/losers
   const resultMap = useMemo(() => buildResultMap(results), [results]);
 
   // Compute actual participants for all matches based on cascading results
-  const actualParticipantsMap = useMemo(
+  const actualParticipantsMapFull = useMemo(
     () => computeAllActualParticipants(results, tournament.player_count as 16 | 24),
     [results, tournament.player_count]
   );
 
+  // In predictions mode, use empty map to show original predictions without result overlays
+  const actualParticipantsMap = viewMode === 'results' ? actualParticipantsMapFull : new Map();
+
   // Build a map of pick results from existingPicks for display
   // Combines pick info with result info for winner highlight and result bar
-  const pickResultMap = useMemo(() => {
+  const pickResultMapFull = useMemo(() => {
     const map = new Map<string, {
       isCorrect: boolean | null;
       pickedWinner: number;
@@ -133,14 +141,17 @@ export default function BracketView({
     return map;
   }, [existingPicks, resultMap]);
 
-  // For backwards compatibility with subtotal calculation
+  // In predictions mode, use empty map to hide result overlays
+  const pickResultMap = viewMode === 'results' ? pickResultMapFull : new Map();
+
+  // For backwards compatibility with subtotal calculation (always use full map)
   const pickCorrectnessMap = useMemo(() => {
     const map = new Map<string, boolean | null>();
-    for (const [key, value] of pickResultMap) {
+    for (const [key, value] of pickResultMapFull) {
       map.set(key, value.isCorrect);
     }
     return map;
-  }, [pickResultMap]);
+  }, [pickResultMapFull]);
 
   // Calculate round subtotals (points earned / max) for each round
   const roundSubtotals = useMemo(() => {
@@ -482,6 +493,34 @@ export default function BracketView({
         </div>
       )}
 
+      {/* View mode toggle - only show when there are results */}
+      {hasAnyResults && (
+        <div className="mb-4 p-3 bg-[rgb(var(--color-bg-secondary))] rounded-lg flex items-center justify-center gap-3">
+          <span className={`text-sm ${viewMode === 'predictions' ? 'font-medium text-[rgb(var(--color-text-primary))]' : 'text-[rgb(var(--color-text-secondary))]'}`}>
+            Original Predictions
+          </span>
+          <button
+            type="button"
+            onClick={() => setViewMode(v => v === 'results' ? 'predictions' : 'results')}
+            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
+              viewMode === 'results'
+                ? "bg-[rgb(var(--color-accent-primary))]"
+                : "bg-[rgb(var(--color-border-secondary))]"
+            }`}
+            aria-label={viewMode === 'results' ? 'Switch to original predictions view' : 'Switch to results view'}
+          >
+            <div
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${
+                viewMode === 'results' ? "left-7" : "left-1"
+              }`}
+            />
+          </button>
+          <span className={`text-sm ${viewMode === 'results' ? 'font-medium text-[rgb(var(--color-text-primary))]' : 'text-[rgb(var(--color-text-secondary))]'}`}>
+            With Results
+          </span>
+        </div>
+      )}
+
       {/* Scroll hint - mobile only */}
       <div className="sm:hidden text-center text-sm text-[rgb(var(--color-text-muted))] mb-2 py-2 flex items-center justify-center gap-2 bg-[rgb(var(--color-bg-secondary))] rounded-lg">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -511,6 +550,7 @@ export default function BracketView({
                 pickResultMap={pickResultMap}
                 actualParticipantsMap={actualParticipantsMap}
                 subtotal={roundSubtotals[ROUNDS.OPENING]}
+                hideSubtotal={viewMode === 'predictions'}
               />
 
               {/* Connector: Opening → R16 */}
@@ -535,6 +575,7 @@ export default function BracketView({
             pickResultMap={pickResultMap}
             actualParticipantsMap={actualParticipantsMap}
             subtotal={roundSubtotals[ROUNDS.ROUND_OF_16]}
+            hideSubtotal={viewMode === 'predictions'}
           />
 
           {/* Connector: R16 → Quarters */}
@@ -557,6 +598,7 @@ export default function BracketView({
             pickResultMap={pickResultMap}
             actualParticipantsMap={actualParticipantsMap}
             subtotal={roundSubtotals[ROUNDS.QUARTERS]}
+            hideSubtotal={viewMode === 'predictions'}
           />
 
           <BracketConnector
@@ -578,6 +620,7 @@ export default function BracketView({
             pickResultMap={pickResultMap}
             actualParticipantsMap={actualParticipantsMap}
             subtotal={roundSubtotals[ROUNDS.SEMIS]}
+            hideSubtotal={viewMode === 'predictions'}
           />
 
           <BracketConnector
@@ -600,6 +643,7 @@ export default function BracketView({
               pickResultMap={pickResultMap}
               actualParticipantsMap={actualParticipantsMap}
               subtotal={roundSubtotals[ROUNDS.FINALS]}
+              hideSubtotal={viewMode === 'predictions'}
             />
 
             {/* Champion display */}
@@ -639,6 +683,7 @@ export default function BracketView({
                 pickResultMap={pickResultMap}
                 actualParticipantsMap={actualParticipantsMap}
                 subtotal={roundSubtotals[ROUNDS.CONSOLATION]}
+                hideSubtotal={viewMode === 'predictions'}
               />
             </div>
           </div>

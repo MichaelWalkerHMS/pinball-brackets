@@ -508,6 +508,79 @@ Non-blocking - toggle works correctly for mouse users. This is an accessibility 
 
 ---
 
+### [MEDIUM] Extract TournamentRow to Shared Component
+**Added:** 2026-01-15 | **Source:** PR #58 / Code Review
+**Area:** Code Quality, Maintainability
+**Files:**
+- `src/components/admin/UpcomingTournaments.tsx` (lines 80-115)
+- `src/app/admin/page.tsx` (lines 116-156)
+
+**Current Behavior:**
+The `TournamentRow` component is duplicated between `UpcomingTournaments.tsx` and the admin page. Both render tournament rows with similar structure but slightly different details (the new component shows state in the subtitle).
+
+**Suggested Improvement:**
+Extract `TournamentRow` to a shared component in `src/components/admin/TournamentRow.tsx` that can be configured via props.
+
+**Suggested Fix:**
+```typescript
+// src/components/admin/TournamentRow.tsx
+interface TournamentRowProps {
+  tournament: Tournament;
+  badgeColor: string;
+  showState?: boolean;
+}
+
+export function TournamentRow({ tournament, badgeColor, showState = false }: TournamentRowProps) {
+  // Shared implementation with optional state display
+}
+```
+
+**Why Deferred:**
+Non-blocking - both implementations work correctly. This is a maintainability improvement to reduce duplication.
+
+---
+
+### [LOW] Add aria-pressed to State Filter Buttons
+**Added:** 2026-01-15 | **Source:** PR #58 / Code Review
+**Area:** Accessibility
+**Files:** `src/components/admin/UpcomingTournaments.tsx` (lines 36-55)
+
+**Current Behavior:**
+The state filter buttons change visual appearance when selected but don't communicate selection state to screen readers.
+
+**Code Context:**
+```tsx
+<button
+  onClick={() => setSelectedState("all")}
+  className={`px-3 py-1 text-sm rounded-full transition-colors ${
+    selectedState === "all"
+      ? "bg-[rgb(var(--color-accent-primary))] text-white"
+      : "bg-[rgb(var(--color-bg-secondary))] ..."
+  }`}
+>
+  All
+</button>
+```
+
+**Suggested Improvement:**
+Add `aria-pressed` attribute to communicate toggle state to assistive technologies.
+
+**Suggested Fix:**
+```tsx
+<button
+  onClick={() => setSelectedState("all")}
+  aria-pressed={selectedState === "all"}
+  className={...}
+>
+  All
+</button>
+```
+
+**Why Deferred:**
+Non-blocking - filters work correctly for sighted users. This is an accessibility enhancement for screen reader users.
+
+---
+
 ## Completed Items
 
 Move items here when they've been addressed, with a note about which PR fixed them.

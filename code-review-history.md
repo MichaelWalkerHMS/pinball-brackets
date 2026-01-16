@@ -1,3 +1,710 @@
+# PR Review - Admin UI Improvements (Final - State Dropdown + Sorting)
+
+**Review Date:** 2026-01-15
+**Branch:** feature/admin-ui-improvements
+**Reviewer:** Code Review Agent
+**Iteration:** 3 of max 5
+
+---
+
+## Summary
+
+This is a re-review after additional improvements in commits 3 and 4. The PR now contains four commits: (1) adds state filters to the admin Upcoming section and renames the Results Sync button, (2) extracts TournamentRow to a shared component, (3) changes the state filter from pill buttons to a dropdown, and (4) sorts upcoming tournaments by state name ascending. All changes are clean, follow coding standards, and improve the admin UX.
+
+---
+
+## Previous Issues - Resolution Status
+
+| Issue | Status |
+|-------|--------|
+| Duplicated TournamentRow component | FIXED in commit 2 |
+| Accessibility concern for filter buttons | RESOLVED - Changed to dropdown which has better native accessibility |
+
+---
+
+## Findings
+
+### CRITICAL
+
+None.
+
+---
+
+### HIGH
+
+None.
+
+---
+
+### MEDIUM
+
+None.
+
+---
+
+### LOW
+
+None.
+
+---
+
+### Praise
+
+#### Excellent Dropdown Improvement
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (lines 35-47)
+
+The change from pill buttons to a dropdown `<select>` is a good UX improvement:
+- More compact for many states
+- Native HTML select has better accessibility than custom buttons
+- Proper focus ring styling with `focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))]`
+- All CSS variables correctly used for colors and borders
+
+```tsx
+<select
+  value={selectedState}
+  onChange={(e) => setSelectedState(e.target.value)}
+  className="px-3 py-1.5 text-sm rounded-lg border border-[rgb(var(--color-border-primary))] bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))]"
+>
+```
+
+#### Smart State Sorting
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (lines 21-26)
+
+The tournaments are now sorted by state name ascending, which groups tournaments from the same state together. This makes it easier to scan when viewing "All States":
+
+```typescript
+const filteredTournaments = useMemo(() => {
+  const filtered = selectedState === "all"
+    ? tournaments
+    : tournaments.filter((t) => t.state === selectedState);
+  return [...filtered].sort((a, b) => a.state.localeCompare(b.state));
+}, [tournaments, selectedState]);
+```
+
+The use of `localeCompare` is the correct approach for string sorting.
+
+#### All Previous Praise Items Still Apply
+
+- Clean TournamentRow extraction with optional `showState` prop
+- Proper CSS variable usage throughout
+- Clean memoization patterns
+- Smart conditional rendering (dropdown only shows when multiple states)
+- Empty state handling with clear user message
+- Clear rename for Results Sync button
+
+---
+
+## Verification
+
+- **Tests:** All 255 tests pass
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows CSS variable pattern correctly
+- **Previous Issues:** All resolved
+- **No regression:** Existing functionality unchanged
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+All four commits are clean and follow best practices. Key strengths of the final implementation:
+
+1. **DRY principle followed** - Single TournamentRow component serves both contexts
+2. **Clean API** - Optional `showState` prop with sensible default
+3. **Proper CSS variables** - All colors follow the coding standard
+4. **Good memoization** - Computed values properly cached
+5. **Smart UX** - Dropdown filter only appears when useful (multiple states)
+6. **Better accessibility** - Native `<select>` has better a11y than custom buttons
+7. **Logical sorting** - State name ascending groups related tournaments
+8. **All 255 tests pass** - No regressions
+
+Ready to push.
+
+---
+
+---
+
+# PR Review - Admin UI Improvements (State Filters + Results Sync Rename + TournamentRow Extraction)
+
+**Review Date:** 2026-01-15
+**Branch:** feature/admin-ui-improvements
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of max 5
+
+---
+
+## Summary
+
+This is a re-review after the TournamentRow extraction was completed. The PR now contains two commits: (1) adds state filters to the admin Upcoming section and renames the Results Sync button, and (2) extracts the duplicated TournamentRow function into a shared component at `src/components/admin/TournamentRow.tsx` with an optional `showState` prop. The MEDIUM-severity code duplication issue from iteration 1 has been fully resolved.
+
+---
+
+## Previous Issues - Resolution Status
+
+| Issue | Status |
+|-------|--------|
+| Duplicated TournamentRow component | FIXED - Extracted to shared component |
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+#### 1. Consider Accessibility for State Filter Buttons (carried from iteration 1)
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (lines 36-58)
+
+**Issue:**
+The state filter buttons work for mouse users, but they lack aria-labels or role attributes to indicate their purpose to screen readers. The current active state is communicated visually but not programmatically.
+
+**Why it matters:**
+Minor accessibility improvement. Screen reader users wouldn't know these are filter buttons or which one is currently selected.
+
+**Suggested enhancement (optional):**
+```tsx
+<button
+  aria-pressed={selectedState === "all"}
+  aria-label="Show all states"
+  onClick={() => setSelectedState("all")}
+  // ...
+>
+```
+
+No change required for approval - this is a suggestion for future improvement.
+
+---
+
+### 🟢 Praise
+
+#### Excellent Component Extraction
+
+**File:** `src/components/admin/TournamentRow.tsx`
+
+The TournamentRow extraction is clean and well-designed:
+- Single shared component replaces two nearly-identical implementations
+- Optional `showState` prop (defaulting to `false`) handles the visual difference between contexts
+- Clean TypeScript interface with `TournamentRowProps`
+- Default export follows the component file pattern used elsewhere
+- All CSS variables properly preserved
+
+#### Clean Integration in Both Contexts
+
+**Files:** `src/app/admin/page.tsx`, `src/components/admin/UpcomingTournaments.tsx`
+
+Both files now import and use the shared TournamentRow component:
+- `admin/page.tsx` uses it without `showState` (or with `showState={false}` implicitly)
+- `UpcomingTournaments.tsx` uses it with `showState` (boolean shorthand for `showState={true}`)
+
+This is exactly the refactoring that was suggested in iteration 1.
+
+#### Proper Removal of Duplicate Code
+
+**File:** `src/app/admin/page.tsx` (diff lines 113-153)
+
+The original `TournamentRow` function (41 lines) was removed from the admin page, eliminating the code duplication entirely. The `TournamentSection` component now imports from the shared location.
+
+#### All Previous Praise Items Still Apply
+
+- Excellent CSS variable usage throughout
+- Clean memoization pattern in UpcomingTournaments
+- Smart conditional rendering (filter only shows when multiple states)
+- Empty state handling with clear user message
+- Clear rename for Results Sync button
+
+---
+
+## Verification
+
+- **Tests:** All 255 tests pass
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows CSS variable pattern correctly
+- **Previous Issue:** TournamentRow duplication resolved via component extraction
+- **No regression:** Existing functionality unchanged
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+All issues from iteration 1 have been resolved. The TournamentRow extraction is clean, follows React/TypeScript best practices, and eliminates the code duplication concern. Key strengths:
+
+1. **DRY principle followed** - Single TournamentRow component serves both contexts
+2. **Clean API** - Optional `showState` prop with sensible default
+3. **Proper CSS variables** - All colors follow the coding standard
+4. **Good memoization** - Computed values properly cached
+5. **Smart UX** - Filter only appears when useful (multiple states)
+6. **All 255 tests pass** - No regressions
+
+The only remaining item is a LOW-severity accessibility suggestion for filter buttons, which is optional. Ready to push.
+
+---
+
+---
+
+# PR Review - Admin UI Improvements (State Filters + Results Sync Rename)
+
+**Review Date:** 2026-01-15
+**Branch:** feature/admin-ui-improvements
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR makes two minor improvements to the admin dashboard: (1) Adds state filter buttons to the Upcoming tournaments section, allowing admins to filter by state when there are tournaments in multiple states, and (2) Renames the "Match Play Sync" box to "Results Sync" with button text "Sync All Results" for clearer labeling. The implementation is clean, follows CSS variable standards, properly memoizes computed values, and reuses existing UI patterns.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+#### 1. Duplicated TournamentRow Component
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (lines 83-123) and `src/app/admin/page.tsx` (lines 113-153)
+
+**Issue:**
+The new `UpcomingTournaments.tsx` file contains a `TournamentRow` component that is nearly identical to the `TournamentRow` function in `admin/page.tsx`. The only difference is that the new version includes the state in the subtitle text.
+
+**Why it matters:**
+Code duplication makes maintenance harder. If the row design changes, both places need updating. The two implementations could drift apart over time.
+
+**Suggested fix:**
+Consider extracting `TournamentRow` to a shared component in `src/components/admin/` that accepts an optional `showState` prop:
+```typescript
+// src/components/admin/TournamentRow.tsx
+export function TournamentRow({
+  tournament,
+  badgeColor,
+  showState = false,
+}: {
+  tournament: Tournament;
+  badgeColor: string;
+  showState?: boolean;
+}) {
+  // ...
+  <p className="text-sm text-[rgb(var(--color-text-muted))]">
+    {formattedDate} &bull; {tournament.player_count} players
+    {showState && ` \u2022 ${tournament.state}`}
+  </p>
+}
+```
+
+Then both `TournamentSection` and `UpcomingTournaments` can import and use the shared component.
+
+**Recommendation:** This is a valid refactoring opportunity but not blocking since the current implementation works correctly. Can be addressed now or deferred.
+
+---
+
+### 🔵 Low
+
+#### 1. Consider Accessibility for State Filter Buttons
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (lines 36-58)
+
+**Issue:**
+The state filter buttons work for mouse users, but they lack aria-labels or role attributes to indicate their purpose to screen readers. The current active state is communicated visually but not programmatically.
+
+**Why it matters:**
+Minor accessibility improvement. Screen reader users wouldn't know these are filter buttons or which one is currently selected.
+
+**Suggested enhancement (optional):**
+```tsx
+<button
+  aria-pressed={selectedState === "all"}
+  aria-label="Show all states"
+  onClick={() => setSelectedState("all")}
+  // ...
+>
+```
+
+No change required for approval - this is a suggestion for future improvement.
+
+---
+
+### 🟢 Praise
+
+#### Excellent CSS Variable Usage
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (all styling)
+
+All colors correctly use CSS variables as required by coding standards:
+- `text-[rgb(var(--color-text-primary))]` for headings
+- `text-[rgb(var(--color-text-muted))]` for filter label and subtitles
+- `bg-[rgb(var(--color-accent-primary))]` for active filter state
+- `bg-[rgb(var(--color-bg-secondary))]` for inactive filter state
+- `border-[rgb(var(--color-border-primary))]` for container borders
+
+This follows the established "Use CSS Variables for Colors" coding standard perfectly.
+
+#### Clean Memoization Pattern
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (lines 15-24)
+
+The component correctly memoizes both the unique states list and the filtered tournaments:
+```typescript
+const states = useMemo(() => {
+  const uniqueStates = [...new Set(tournaments.map((t) => t.state))].sort();
+  return uniqueStates;
+}, [tournaments]);
+
+const filteredTournaments = useMemo(() => {
+  if (selectedState === "all") return tournaments;
+  return tournaments.filter((t) => t.state === selectedState);
+}, [tournaments, selectedState]);
+```
+
+This avoids unnecessary recomputation on each render.
+
+#### Smart Conditional Rendering
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (line 32)
+
+The filter UI only appears when there are multiple states:
+```tsx
+{states.length > 1 && (
+```
+
+This avoids showing a useless "All | MI" filter when all tournaments are in a single state.
+
+#### Empty State Handling
+
+**File:** `src/components/admin/UpcomingTournaments.tsx` (lines 74-78)
+
+The component handles the case where filtering results in no tournaments:
+```tsx
+<p className="text-[rgb(var(--color-text-muted))]">No upcoming tournaments in {selectedState}</p>
+```
+
+This provides clear feedback to the user.
+
+#### Clear Rename for Results Sync
+
+**File:** `src/components/admin/BulkSyncButton.tsx` (lines 62, 111)
+
+The rename from "Match Play Sync" to "Results Sync" and "Sync All" to "Sync All Results" is a good UX improvement. The description still mentions "Match Play" where relevant (line 65), so users understand the source, but the primary label now describes the action more clearly.
+
+---
+
+## Verification
+
+- **Tests:** All 255 tests pass
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows CSS variable pattern correctly
+- **No regression:** Existing functionality unchanged
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+The implementation is clean and functional. Key strengths:
+
+1. **Proper CSS variables** - All colors follow the coding standard
+2. **Good memoization** - Computed values are properly cached
+3. **Smart UX** - Filter only appears when useful (multiple states)
+4. **Empty state handled** - Clear message when no tournaments match filter
+
+The only MEDIUM finding (duplicated TournamentRow) is a valid refactoring opportunity but not a blocking issue since:
+- The current implementation is correct and fully functional
+- The duplication is minor (one component in two places)
+- The visual difference (showing state) is intentional
+
+**Recommendation:** Can merge as-is and optionally address the TournamentRow extraction in a future cleanup PR, or address it now if preferred.
+
+---
+
+---
+
+# PR Review - Bracket View Mode Toggle
+
+**Review Date:** 2026-01-15
+**Branch:** feature/bracket-view-mode-toggle
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR adds a view mode toggle to the bracket prediction page that allows users to switch between "Results" mode (showing result overlays with correct/incorrect highlighting) and "Original Predictions" mode (showing pure predictions without any result indicators). The implementation is clean, reuses the existing toggle pattern from the public/private toggle, follows CSS variable standards, and properly handles the data flow by conditionally passing empty maps instead of null values.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+#### 1. Consider Keyboard Accessibility for Toggle
+
+**File:** `src/components/bracket/Bracket.tsx` (lines 502-517)
+
+**Issue:**
+The view mode toggle button works for mouse and touch users, but the toggle doesn't have focus ring styling that matches the other toggles in the codebase. While the button is technically keyboard-accessible (since it's a `<button>`), adding visible focus styles would improve the experience.
+
+**Why it matters:**
+Minor accessibility improvement. The toggle is functional for keyboard users, but visual feedback on focus is helpful.
+
+**Suggested enhancement (optional):**
+```tsx
+<button
+  type="button"
+  onClick={() => setViewMode(v => v === 'results' ? 'predictions' : 'results')}
+  className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:ring-offset-2 ${
+    viewMode === 'results'
+      ? "bg-[rgb(var(--color-accent-primary))]"
+      : "bg-[rgb(var(--color-border-secondary))]"
+  }`}
+```
+
+No change required for approval - this is a suggestion for future improvement.
+
+---
+
+### 🟢 Praise
+
+#### Excellent Reuse of Existing Toggle Pattern
+
+**File:** `src/components/bracket/Bracket.tsx` (lines 496-522)
+
+The view mode toggle perfectly mirrors the existing public/private toggle pattern:
+- Same visual design (pill-shaped toggle with sliding dot)
+- Same CSS classes for active/inactive states
+- Proper `aria-label` for screen readers
+- Clean state management with union type `'results' | 'predictions'`
+
+This consistency makes the UI feel cohesive and the code easier to maintain.
+
+#### Smart Data Flow Architecture
+
+**File:** `src/components/bracket/Bracket.tsx` (lines 114-145)
+
+The approach of computing full data once and then conditionally passing empty maps is elegant:
+```typescript
+const actualParticipantsMapFull = useMemo(...);
+const actualParticipantsMap = viewMode === 'results' ? actualParticipantsMapFull : new Map();
+
+const pickResultMapFull = useMemo(...);
+const pickResultMap = viewMode === 'results' ? pickResultMapFull : new Map();
+```
+
+This avoids:
+- Re-computing data on every toggle
+- Passing `null` values that would require null checks throughout child components
+- Breaking the existing component interfaces
+
+The existing components just see empty maps and render accordingly.
+
+#### Proper CSS Variable Usage
+
+**File:** `src/components/bracket/Bracket.tsx` (lines 498-519)
+
+All colors use CSS variables as required by coding standards:
+- `bg-[rgb(var(--color-bg-secondary))]` for container
+- `text-[rgb(var(--color-text-primary))]` and `text-[rgb(var(--color-text-secondary))]` for labels
+- `bg-[rgb(var(--color-accent-primary))]` and `bg-[rgb(var(--color-border-secondary))]` for toggle states
+
+#### Clean Props Addition to Round Component
+
+**File:** `src/components/bracket/Round.tsx` (lines 36, 51, 78)
+
+The `hideSubtotal` prop is a clean, minimal addition:
+- Well-documented with JSDoc comment explaining purpose
+- Uses simple boolean logic: `{hasAnyScored && subtotal && !hideSubtotal && ...}`
+- Doesn't require changes to parent components beyond passing the prop
+
+#### Subtotals Still Calculate Correctly
+
+**File:** `src/components/bracket/Bracket.tsx` (lines 147-154)
+
+Important detail: `pickCorrectnessMap` still uses `pickResultMapFull`, not the conditionally-empty `pickResultMap`. This ensures that:
+- The internal scoring/calculation always uses real data
+- Only the visual display is affected by the toggle
+- Users see their actual score even in "Original Predictions" mode (if they scroll to see it elsewhere)
+
+---
+
+## Verification
+
+- **Tests:** All 255 tests pass
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows CSS variable pattern correctly
+- **No regression:** Existing functionality unchanged when toggle is in "results" mode
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+The implementation is clean, well-architected, and follows all established coding patterns. Key strengths:
+
+1. **Consistent UI** - Toggle matches existing public/private toggle design
+2. **Smart data handling** - Empty maps avoid null checks and component interface changes
+3. **Proper CSS variables** - All colors follow the coding standard
+4. **Minimal prop additions** - `hideSubtotal` is the only new prop needed
+5. **No test breakage** - All 255 tests pass
+
+The only remaining item is a LOW-severity accessibility suggestion for focus styles, which is optional. Ready to commit and push.
+
+---
+
+---
+
+# PR Review - State/Province Label Update
+
+**Review Date:** 2026-01-15
+**Branch:** feature/bulk-player-sync
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR updates three text strings in the TournamentWizard component to change "State" to "State/Province" - the label, placeholder, and hint text. This is a simple internationalization improvement to be more inclusive of Canadian provinces. The change is minimal, focused, and has no functional impact.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+None.
+
+---
+
+### 🟢 Praise
+
+#### Clean, Focused Change
+
+**File:** `src/components/landing/TournamentWizard.tsx` (lines 88, 96, 127)
+
+This is exactly how small text changes should be done:
+- Only the necessary strings are modified
+- No unrelated code changes
+- No formatting changes
+- Clear, consistent terminology across all three locations
+
+#### Good Internationalization Thinking
+
+The change from "State" to "State/Province" makes the UI more inclusive for Canadian users without adding complexity. The slash notation is a common UI pattern for this type of regional variation.
+
+---
+
+## Proposed Standards
+
+None. This is a straightforward text change that doesn't warrant a new standard.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+This is a clean, minimal change that improves the user experience for Canadian users. No blocking issues found. Ready to push.
+
+---
+
+---
+
 # PR Review - Admin CMS for Static Pages
 
 **Review Date:** 2026-01-12

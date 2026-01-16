@@ -62,3 +62,4 @@ feature-plans/add-states/*.csv
 feature-plans/add-states/.~lock.*
 # Database backups
 backups/
+*-backup-*.sql

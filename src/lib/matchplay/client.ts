@@ -44,6 +44,7 @@ export async function safeMatchPlayCall<T>(
     const data = await fn();
     return { success: true, data };
   } catch (err) {
+    // nosemgrep: unsafe-formatstring -- actionName is a hardcoded string from our code
     console.error(`[Match Play] ${actionName} failed:`, err);
 
     if (err instanceof MatchPlayError) {

@@ -112,6 +112,7 @@ async function backupDevTables(
     const { data, error } = await client.from(table).select("*");
 
     if (error) {
+      // nosemgrep: unsafe-formatstring -- table is from hardcoded array
       console.error(`  ERROR reading ${table}:`, error.message);
       throw error;
     }
@@ -163,6 +164,7 @@ async function readFromProd<T>(
   const { data, error } = await client.from(table).select("*");
 
   if (error) {
+    // nosemgrep: unsafe-formatstring -- table is from hardcoded array
     console.error(`  ERROR reading ${table}:`, error.message);
     throw error;
   }
@@ -196,6 +198,7 @@ async function clearDevTable(
     .not("id", "is", null);
 
   if (error) {
+    // nosemgrep: unsafe-formatstring -- table is from hardcoded array
     console.error(`  ERROR clearing ${table}:`, error.message);
     throw error;
   }
@@ -231,6 +234,7 @@ async function writeToDev<T extends Record<string, unknown>>(
     const { error } = await client.from(table).insert(batch);
 
     if (error) {
+      // nosemgrep: unsafe-formatstring -- table is from hardcoded array
       console.error(`  ERROR writing to ${table}:`, error.message);
       throw error;
     }

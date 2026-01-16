@@ -16,6 +16,7 @@ export async function getPageContent(slug: string): Promise<SiteContent | null> 
   if (error) {
     // PGRST116 = no rows returned, which is expected for missing content
     if (error.code !== "PGRST116") {
+      // nosemgrep: unsafe-formatstring -- slug is from internal routing, not user input
       console.error(`Error fetching page content for ${slug}:`, error);
     }
     return null;

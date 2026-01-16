@@ -84,6 +84,7 @@ interface ImportResult {
 // ============================================================================
 
 function loadEnv(envFile: string) {
+  // nosemgrep: path-join-resolve-traversal -- CLI script, envFile from our own argv parsing
   const envPath = path.join(process.cwd(), envFile);
   if (!fs.existsSync(envPath)) {
     console.error(`Error: ${envFile} file not found`);

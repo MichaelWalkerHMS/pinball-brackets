@@ -17,10 +17,12 @@ export default function UpcomingTournaments({ tournaments }: UpcomingTournaments
     return uniqueStates;
   }, [tournaments]);
 
-  // Filter tournaments by selected state
+  // Filter and sort tournaments by selected state
   const filteredTournaments = useMemo(() => {
-    if (selectedState === "all") return tournaments;
-    return tournaments.filter((t) => t.state === selectedState);
+    const filtered = selectedState === "all"
+      ? tournaments
+      : tournaments.filter((t) => t.state === selectedState);
+    return [...filtered].sort((a, b) => a.state.localeCompare(b.state));
   }, [tournaments, selectedState]);
 
   const badgeColor = "bg-[rgb(var(--color-accent-light))] text-[rgb(var(--color-accent-text))]";

@@ -1,12 +1,73 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import type { Tournament, Player, Bracket, Pick, Result } from "@/lib/types";
 import BracketView from "@/components/bracket/Bracket";
 import ResponsiveHeader from "@/components/ResponsiveHeader";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  // Fetch bracket with minimal fields
+  const { data: bracket } = await supabase
+    .from("brackets")
+    .select("name, user_id, tournament_id, is_public")
+    .eq("id", id)
+    .single();
+
+  // Return generic metadata if bracket not found or is private
+  if (!bracket || !bracket.is_public) {
+    return {
+      title: "Bracket | Pinball Brackets",
+      description: "View bracket predictions for IFPA pinball tournaments.",
+    };
+  }
+
+  // Fetch tournament name
+  const { data: tournament } = await supabase
+    .from("tournaments")
+    .select("name")
+    .eq("id", bracket.tournament_id)
+    .single();
+
+  // Fetch owner's display name
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", bracket.user_id)
+    .single();
+
+  const ownerName = profile?.display_name || "Anonymous";
+  const bracketName = bracket.name;
+  const tournamentName = tournament?.name || "Tournament";
+
+  // Build title based on whether bracket has a name
+  const title = bracketName
+    ? `${ownerName}'s "${bracketName}" Bracket | Pinball Brackets`
+    : `${ownerName}'s Bracket | Pinball Brackets`;
+
+  const description = `Check out my bracket for the ${tournamentName}!`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
 }
 
 export default async function BracketPage({ params }: PageProps) {

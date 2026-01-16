@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createMatchPlayClient, safeMatchPlayCall, mapMatchPlayGames } from '@/lib/matchplay';
 import { recalculateScores } from '@/lib/scoring';
 
+// Rate limiting: delay between Match Play API calls to avoid overwhelming their servers
+const FETCH_DELAY_MS = 1500;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 interface TournamentSyncResult {
   tournamentId: string;
   tournamentName: string;
@@ -116,8 +120,9 @@ export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
   let totalImported = 0;
   let totalSkipped = 0;
 
-  // Process each tournament
-  for (const tournament of tournaments) {
+  // Process each tournament with rate limiting
+  for (let i = 0; i < tournaments.length; i++) {
+    const tournament = tournaments[i];
     const result: TournamentSyncResult = {
       tournamentId: tournament.id,
       tournamentName: tournament.name,
@@ -204,6 +209,11 @@ export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
     }
 
     results.push(result);
+
+    // Rate limit: delay before next tournament (except for last one)
+    if (i < tournaments.length - 1) {
+      await sleep(FETCH_DELAY_MS);
+    }
   }
 
   return NextResponse.json({

@@ -427,7 +427,7 @@ export default function BracketView({
 
             {/* Status indicators */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <MatchPlayIndicator isLinked={!!tournament.matchplay_id} />
+              <MatchPlayIndicator isLinked={!!tournament.matchplay_id} matchPlayId={tournament.matchplay_id} />
 
               {saveMessage && (
                 <span

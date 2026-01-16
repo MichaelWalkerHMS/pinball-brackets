@@ -471,6 +471,43 @@ Non-blocking - both interfaces are identical and work correctly. This is a maint
 
 ---
 
+### [LOW] Add Focus Ring to View Mode Toggle Button
+**Added:** 2026-01-15 | **Source:** Code Review (feature/bracket-view-mode-toggle)
+**Area:** Accessibility
+**Files:** `src/components/bracket/Bracket.tsx` (lines 502-516)
+
+**Current Behavior:**
+The view mode toggle button (Results/Original Predictions) has no visible focus indicator for keyboard users.
+
+**Code Context:**
+```tsx
+<button
+  type="button"
+  onClick={() => setViewMode(v => v === 'results' ? 'predictions' : 'results')}
+  className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
+    viewMode === 'results'
+      ? "bg-[rgb(var(--color-accent-primary))]"
+      : "bg-[rgb(var(--color-border-secondary))]"
+  }`}
+  aria-label={...}
+>
+```
+
+**Suggested Improvement:**
+Add focus ring styling consistent with other interactive elements.
+
+**Suggested Fix:**
+```tsx
+className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer
+  focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:ring-offset-2
+  ${viewMode === 'results' ? "bg-[rgb(var(--color-accent-primary))]" : "bg-[rgb(var(--color-border-secondary))]"}`}
+```
+
+**Why Deferred:**
+Non-blocking - toggle works correctly for mouse users. This is an accessibility enhancement for keyboard navigation.
+
+---
+
 ## Completed Items
 
 Move items here when they've been addressed, with a note about which PR fixed them.

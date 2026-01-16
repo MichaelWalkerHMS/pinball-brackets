@@ -1,12 +1,107 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import type { Tournament, Player, Bracket, Pick, Result } from "@/lib/types";
 import BracketView from "@/components/bracket/Bracket";
 import ResponsiveHeader from "@/components/ResponsiveHeader";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+// Default metadata for fallback
+const defaultMetadata: Metadata = {
+  title: "Bracket | Pinball Brackets",
+  description: "View bracket predictions for IFPA pinball tournaments.",
+  openGraph: {
+    title: "Bracket | Pinball Brackets",
+    description: "View bracket predictions for IFPA pinball tournaments.",
+    type: "website",
+    images: [
+      {
+        url: "/pinball-bracket-logo-expanded.png",
+        width: 1200,
+        height: 630,
+        alt: "Pinball Brackets",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bracket | Pinball Brackets",
+    description: "View bracket predictions for IFPA pinball tournaments.",
+    images: ["/pinball-bracket-logo-expanded.png"],
+  },
+};
+
+// Generate metadata with og:url pointing to public view URL
+// This ensures shared edit links show correct preview and canonical URL
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  try {
+    const { id } = await params;
+    const supabase = await createClient();
+
+    // Fetch bracket info (without user filter - we just need metadata)
+    const { data: bracket } = await supabase
+      .from("brackets")
+      .select("name, user_id, tournament_id, is_public")
+      .eq("id", id)
+      .single();
+
+    // Return generic metadata if bracket not found
+    if (!bracket) {
+      return defaultMetadata;
+    }
+
+    // Fetch tournament name and owner profile in parallel
+    const [{ data: tournament }, { data: profile }] = await Promise.all([
+      supabase.from("tournaments").select("name").eq("id", bracket.tournament_id).single(),
+      supabase.from("profiles").select("display_name").eq("id", bracket.user_id).single(),
+    ]);
+
+    const ownerName = profile?.display_name || "Anonymous";
+    const bracketName = bracket.name;
+    const tournamentName = tournament?.name || "Tournament";
+
+    // Build title based on whether bracket has a name
+    const title = bracketName
+      ? `${ownerName}'s "${bracketName}" Bracket | Pinball Brackets`
+      : `${ownerName}'s Bracket | Pinball Brackets`;
+
+    const description = `Check out my bracket for the ${tournamentName}!`;
+
+    // Point og:url to public view so crawlers use correct canonical URL
+    const publicUrl = `https://www.pinballbrackets.com/bracket/${id}`;
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        url: publicUrl,
+        type: "website",
+        images: [
+          {
+            url: "/pinball-bracket-logo-expanded.png",
+            width: 1200,
+            height: 630,
+            alt: "Pinball Brackets",
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: ["/pinball-bracket-logo-expanded.png"],
+      },
+    };
+  } catch {
+    // Return default metadata if anything fails (e.g., crawler without cookies)
+    return defaultMetadata;
+  }
 }
 
 export default async function BracketEditPage({ params }: PageProps) {
@@ -18,8 +113,10 @@ export default async function BracketEditPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Redirect unauthenticated users to public view (not login)
+  // This improves UX when edit URLs are shared - visitors see the bracket
   if (!user) {
-    redirect("/login");
+    redirect(`/bracket/${bracketId}`);
   }
 
   // Fetch bracket (must belong to current user)

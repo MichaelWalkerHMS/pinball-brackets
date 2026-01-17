@@ -59,8 +59,9 @@ export default async function TournamentHubPage({ params }: PageProps) {
               className={
                 isLocked ? "text-[rgb(var(--color-error-icon))] font-medium" : "text-[rgb(var(--color-success-icon))]"
               }
+              title={isLocked ? "Now that results are coming in, no changes are allowed to brackets. Good luck!" : undefined}
             >
-              {isLocked ? "Predictions Locked" : "Predictions Open"}
+              {isLocked ? "Locked - Results Coming In" : "Predictions Open"}
             </span>
           </p>
         </div>

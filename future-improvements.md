@@ -540,6 +540,39 @@ Non-blocking - both implementations work correctly. This is a maintainability im
 
 ---
 
+### [LOW] Remove Dead "orange" Color Path in Match.tsx
+**Added:** 2026-01-17 | **Source:** PR #TBD (fix/bracket-alignment-and-centering) / Code Review
+**Area:** Code Quality
+**Files:** `src/components/bracket/Match.tsx` (lines 81-82, 161)
+
+**Current Behavior:**
+The `resultBarColor` type includes "orange" as a valid option, and the result bar styling includes an orange case, but "orange" is never assigned anywhere in the code. The code always assigns "green" or "red".
+
+**Code Context:**
+```typescript
+// Line 81-82: Type includes orange
+let resultBarColor: "green" | "red" | "orange" | null = null;
+
+// Line 161: Orange case in styling (never reached)
+: "bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning-text))] ..."
+```
+
+**Suggested Improvement:**
+Remove the unused "orange" option from the type and the corresponding styling branch.
+
+**Suggested Fix:**
+```typescript
+// Simplified type
+let resultBarColor: "green" | "red" | null = null;
+
+// Remove the orange styling branch from the template literal
+```
+
+**Why Deferred:**
+Non-blocking - the dead code doesn't affect functionality. Minor cleanup that can be done in a future refactoring pass.
+
+---
+
 ### [LOW] Add aria-pressed to State Filter Buttons
 **Added:** 2026-01-15 | **Source:** PR #58 / Code Review
 **Area:** Accessibility

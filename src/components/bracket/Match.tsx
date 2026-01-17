@@ -52,8 +52,10 @@ export default function Match({
   // topSeed/bottomSeed are user's expected participants based on their picks
   const hasActualTop = actualTopSeed !== undefined && actualTopSeed !== null;
   const hasActualBottom = actualBottomSeed !== undefined && actualBottomSeed !== null;
-  const topIsUnexpected = hasActualTop && actualTopSeed !== topSeed;
-  const bottomIsUnexpected = hasActualBottom && actualBottomSeed !== bottomSeed;
+  // Only mark as unexpected if user made a pick for the feeder match AND that pick differs from actual
+  // If user hasn't picked (topSeed/bottomSeed is null), don't mark actual participant as unexpected
+  const topIsUnexpected = hasActualTop && topSeed !== null && actualTopSeed !== topSeed;
+  const bottomIsUnexpected = hasActualBottom && bottomSeed !== null && actualBottomSeed !== bottomSeed;
 
   // For display: show actual participants if we have results from feeders, otherwise show expected
   const displayTopSeed = hasActualTop ? actualTopSeed : topSeed;
@@ -91,19 +93,23 @@ export default function Match({
       resultBarText = `You picked ${pickedPlayer?.name || `Seed ${pickedWinner}`}`;
       resultBarColor = "red";
     } else {
-      // User expected a different player entirely (their pick lost earlier)
+      // User picked someone who lost earlier and isn't in this match
       const pickedPlayer = playerMap.get(pickedWinner);
-      resultBarText = `Expected ${pickedPlayer?.name || `Seed ${pickedWinner}`}`;
-      resultBarColor = "orange";
+      resultBarText = `You picked ${pickedPlayer?.name || `Seed ${pickedWinner}`}`;
+      resultBarColor = "red";
       winnerWasUnexpected = true;
     }
   }
   // Note: "Expected X" for unexpected participants (without result) is now shown
   // inline in each PlayerSlot, so we don't need a result bar for that case
 
-  // Determine border and rounding based on whether result bar is shown
-  const hasResultBar = !!resultBarText;
-  const matchContainerClasses = hasResultBar
+  // Only top-align slots when there's BOTH a result bar AND at least one unexpected participant
+  // (need room for both the "Expected X" message in slot AND the result bar below)
+  const hasAnyUnexpectedParticipant = topIsUnexpected || bottomIsUnexpected;
+  const needsTopAlign = hasResult && hasAnyUnexpectedParticipant;
+
+  // Use rounded-t when result bar is visible, full rounded when no result
+  const matchContainerClasses = hasResult
     ? `rounded-t-lg overflow-hidden bg-[rgb(var(--color-bg-primary))] shadow-sm ${
         isAffected ? 'border-2 border-b-0 border-[rgb(var(--color-warning-border))]' : 'border border-b-0 border-[rgb(var(--color-border-secondary))]'
       }`
@@ -122,10 +128,11 @@ export default function Match({
           onClick={handlePickTop}
           isAffected={displayTopSeed !== null && affectedSeeds?.includes(displayTopSeed)}
           isActualWinner={hasResult && displayTopSeed === actualWinner}
-          isUnexpectedWinner={hasResult && displayTopSeed === actualWinner && winnerWasUnexpected}
+          isUnexpectedWinner={hasResult && displayTopSeed === actualWinner && winnerWasUnexpected && topIsUnexpected}
           isUnexpectedParticipant={topIsUnexpected}
           expectedSeed={topIsUnexpected ? topSeed : undefined}
           isCorrect={isTopPicked ? isCorrect : undefined}
+          needsTopAlign={needsTopAlign}
         />
         <div className="border-t border-[rgb(var(--color-border-primary))]" />
         <PlayerSlot
@@ -136,24 +143,26 @@ export default function Match({
           onClick={handlePickBottom}
           isAffected={displayBottomSeed !== null && affectedSeeds?.includes(displayBottomSeed)}
           isActualWinner={hasResult && displayBottomSeed === actualWinner}
-          isUnexpectedWinner={hasResult && displayBottomSeed === actualWinner && winnerWasUnexpected}
+          isUnexpectedWinner={hasResult && displayBottomSeed === actualWinner && winnerWasUnexpected && bottomIsUnexpected}
           isUnexpectedParticipant={bottomIsUnexpected}
           expectedSeed={bottomIsUnexpected ? bottomSeed : undefined}
           isCorrect={isBottomPicked ? isCorrect : undefined}
+          needsTopAlign={needsTopAlign}
         />
       </div>
       {/* Result bar - shows pick outcome after results are in */}
-      {resultBarText && (
-        <div className={`px-3 py-1 text-xs font-medium rounded-b-lg ${
-          resultBarColor === "green"
+      {/* Always render container to maintain consistent height for bracket alignment */}
+      <div className={`px-3 py-1 text-xs font-medium rounded-b-lg ${
+        resultBarText
+          ? resultBarColor === "green"
             ? "bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
             : resultBarColor === "red"
             ? "bg-[rgb(var(--color-error-bg))] text-[rgb(var(--color-error-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
             : "bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
-        }`}>
-          {resultBarText}
-        </div>
-      )}
+          : "invisible"
+      }`}>
+        {resultBarText || "\u00A0"} {/* Non-breaking space when empty to maintain height */}
+      </div>
     </div>
   );
 }

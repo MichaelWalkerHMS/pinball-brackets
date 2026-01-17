@@ -14,6 +14,7 @@ interface PlayerSlotProps {
   isUnexpectedParticipant?: boolean; // This player is here due to earlier result, but user expected someone else
   expectedSeed?: number | null; // Who the user expected in this slot (for showing "Expected X" message)
   isCorrect?: boolean | null; // undefined = not picked, null = no result yet, true/false = correct/incorrect
+  needsTopAlign?: boolean; // Whether to top-align content (true when both result bar AND expected message exist)
 }
 
 export default function PlayerSlot({
@@ -28,6 +29,7 @@ export default function PlayerSlot({
   isUnexpectedParticipant,
   expectedSeed,
   isCorrect,
+  needsTopAlign,
 }: PlayerSlotProps) {
   const player = seed !== null ? playerMap.get(seed) : null;
 
@@ -67,9 +69,16 @@ export default function PlayerSlot({
     : null;
   const showExpectedMessage = isUnexpectedParticipant && expectedSeed !== null && expectedSeed !== undefined;
 
+  // All slots have consistent height (h-14 = 56px) to maintain bracket alignment
+  // Center player names by default
+  // Only top-align when BOTH "Expected X" message AND result bar exist (need room for both)
+  const slotClasses = needsTopAlign
+    ? `${baseClasses} ${pickedClasses} ${clickableClasses} !h-14 flex-col !items-start justify-start !pt-2`
+    : `${baseClasses} ${pickedClasses} ${clickableClasses} !h-14 flex-col !items-start justify-center`;
+
   return (
     <div
-      className={`${baseClasses} ${pickedClasses} ${clickableClasses} ${showExpectedMessage ? 'flex-col !items-start !py-1 !h-auto min-h-9' : ''}`}
+      className={slotClasses}
       onClick={isClickable ? onClick : undefined}
       role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
@@ -84,7 +93,7 @@ export default function PlayerSlot({
           : undefined
       }
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 w-full">
         <span className="text-[rgb(var(--color-text-muted))] font-mono text-xs w-5">
           {seed}
         </span>
@@ -95,10 +104,10 @@ export default function PlayerSlot({
           {player?.name || `Seed ${seed}`}
         </span>
       </div>
-      {/* Expected player message when this slot has an unexpected participant */}
-      {showExpectedMessage && (
-        <div className="text-xs text-[rgb(var(--color-unexpected-text))] pt-1 border-t border-[rgb(var(--color-unexpected-border))] mt-1 w-full">
-          Expected {expectedPlayer?.name || `Seed ${expectedSeed}`}
+      {/* Expected player message - only show/reserve space when top-align mode is active */}
+      {needsTopAlign && (
+        <div className={`text-xs h-4 w-full ${showExpectedMessage ? 'text-[rgb(var(--color-unexpected-text))]' : 'invisible'}`}>
+          {showExpectedMessage ? `Expected ${expectedPlayer?.name || `Seed ${expectedSeed}`}` : '\u00A0'}
         </div>
       )}
       {/* Pick indicator - bar on right edge showing user's pick */}

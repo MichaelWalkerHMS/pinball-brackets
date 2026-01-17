@@ -165,20 +165,8 @@ export default async function BracketEditPage({ params }: PageProps) {
     .select("*")
     .eq("tournament_id", bracket.tournament_id);
 
-  // Check if predictions are locked
-  const isLocked = new Date(tournament.lock_date) <= new Date();
-
-  // Format dates for display
-  const lockDate = new Date(tournament.lock_date);
-  const formattedLockDate = lockDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
+  // Check if predictions are locked (locked when results exist)
+  const isLocked = (results?.length ?? 0) > 0;
 
   // Get bracket display name
   const bracketDisplayName = userBracket.name || "My Bracket";
@@ -206,11 +194,6 @@ export default async function BracketEditPage({ params }: PageProps) {
               {isLocked ? "Predictions Locked" : "Predictions Open"}
             </span>
           </p>
-          {!isLocked && (
-            <p className="text-xs sm:text-sm text-[rgb(var(--color-text-muted))] mt-1">
-              Lock date: {formattedLockDate}
-            </p>
-          )}
         </div>
 
         {/* Navigation */}

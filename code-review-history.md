@@ -1,3 +1,220 @@
+# PR Review - Replace lock_date with Results-Based Locking
+
+**Review Date:** 2026-01-17
+**Branch:** feature/results-based-locking
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR replaces the timestamp-based `lock_date` field with computed lock status based on whether results exist for the tournament. This is a significant architectural improvement that eliminates the need for manual lock date management and allows tournaments to automatically unlock when results are cleared. The implementation includes a database migration, TypeScript type updates, RLS policy updates, and UI changes across multiple components.
+
+---
+
+## Findings
+
+### CRITICAL
+
+None.
+
+---
+
+### HIGH
+
+#### 1. TypeScript Errors - Test Fixtures Still Reference `lock_date`
+
+**File:** `__tests__/unit/components/dashboard/MyBracketsTable.test.tsx` (lines 16, 34, 52)
+
+**Issue:**
+The test fixtures for `MyBracketsTable` still include `lock_date` fields that no longer exist in the `DashboardBracket` type. This causes TypeScript compilation errors:
+
+```
+error TS2353: Object literal may only specify known properties, and 'lock_date' does not exist in type 'DashboardBracket'.
+```
+
+**Why it matters:**
+TypeScript compilation fails, preventing the build from completing. This is a blocking issue that must be fixed before merge.
+
+**Suggested fix:**
+Remove the `lock_date` property from all mock bracket objects in the test file:
+
+```typescript
+// Remove these lines (16, 34, 52):
+lock_date: "2026-01-17T12:00:00Z",
+```
+
+---
+
+#### 2. Import Script Still References `lock_date`
+
+**File:** `src/scripts/import-state-tournaments.ts` (lines 259-260, 283)
+
+**Issue:**
+The tournament import script still creates a `lockDate` variable and attempts to insert it into the tournaments table:
+
+```typescript
+// Line 259-260
+const lockDate = startDate;
+
+// Line 283
+lock_date: lockDate.toISOString(),
+```
+
+**Why it matters:**
+After the migration runs, the `lock_date` column will no longer exist, so this script will fail at runtime when trying to import tournaments. This should be cleaned up for consistency.
+
+**Suggested fix:**
+Remove the `lockDate` variable and the `lock_date` field from the insert:
+
+```typescript
+// Remove line 259-260:
+// Lock date = start date
+const lockDate = startDate;
+
+// Remove from insert on line 283:
+// lock_date: lockDate.toISOString(),
+```
+
+---
+
+### MEDIUM
+
+#### 1. next-env.d.ts Modification Should Not Be Committed
+
+**File:** `next-env.d.ts` (line 3)
+
+**Issue:**
+The diff shows a change from `.next/dev/types/routes.d.ts` to `.next/types/routes.d.ts`. This is an auto-generated file managed by Next.js that should not be committed.
+
+**Why it matters:**
+This file header explicitly states "This file should not be edited." Committing changes causes unnecessary merge conflicts and isn't a real code change. This is documented in `coding-standards.md` as a recurring issue.
+
+**Suggested fix:**
+Revert this change before committing:
+```bash
+git checkout main -- next-env.d.ts
+```
+
+---
+
+### LOW
+
+None.
+
+---
+
+### PRAISE
+
+#### Excellent Migration Documentation
+
+**File:** `supabase/migrations/20260116125304_replace_lock_date_with_results_check.sql`
+
+The migration is excellently documented with:
+- Clear header explaining what the change does and why
+- Explicit documentation of the new behavior
+- Section headers for different parts of the migration
+- Comments explaining each policy's purpose
+
+This is a model for how database migrations should be documented.
+
+#### Clean RLS Policy Design
+
+**File:** `supabase/migrations/20260116125304_replace_lock_date_with_results_check.sql` (lines 35-116)
+
+The new RLS policies are well-designed:
+- Proper `NOT EXISTS` subqueries to check for results
+- Consistent pattern across brackets and picks tables
+- Correct handling of the `bracket_id` join for picks policies
+- Appropriate use of `(select auth.uid())` pattern (recommended over direct `auth.uid()` calls)
+
+#### Comprehensive Code Updates
+
+The lock status logic has been consistently updated across all relevant files:
+- `src/app/bracket/[id]/edit/page.tsx` - Edit page lock check
+- `src/app/bracket/[id]/page.tsx` - View page lock check
+- `src/app/tournament/[id]/page.tsx` - Tournament hub lock check
+- `src/app/tournament/[id]/actions.ts` - Server actions lock checks
+- `src/components/dashboard/CreateBracketWizard.tsx` - Tournament filtering
+- `src/components/landing/TournamentWizard.tsx` - Tournament filtering
+- `src/components/dashboard/TournamentDetails.tsx` - Lock status display
+
+#### Smart has_results Computation
+
+**File:** `src/app/page.tsx` (lines 17-26)
+
+The approach to computing `has_results` as a derived field is elegant:
+```typescript
+const tournaments = tournamentsRaw?.map((t) => ({
+  ...t,
+  has_results: (t.results?.[0]?.count ?? 0) > 0,
+  results: undefined, // Remove the raw results array
+})) as Tournament[] | null;
+```
+
+This leverages Supabase's `select("*, results(count)")` pattern to efficiently get the count without loading all results.
+
+#### Proper Type Updates
+
+**File:** `src/lib/types/index.ts`
+
+The type changes are appropriate:
+- `lock_date` removed from `Tournament` type
+- `has_results` added as optional computed field
+- `lock_date` removed from `TournamentFormData`
+- `lock_date` removed from `DashboardBracket`
+
+#### Clean Admin Form Update
+
+**File:** `src/components/admin/TournamentForm.tsx`
+
+The admin form correctly removes the lock date input field and updates the grid from 3 columns to 2 columns for the remaining date fields.
+
+#### Appropriate Test Fixture Updates
+
+**File:** `__tests__/fixtures/tournaments.ts`
+
+The test fixtures correctly update the mock tournaments to use `has_results` instead of `lock_date`, with clear comments explaining when tournaments are locked vs open.
+
+#### E2E Test Update
+
+**File:** `e2e/dashboard.spec.ts`
+
+The E2E test correctly updates to check for the new "Open" or "Locked" text pattern instead of the old "Lock" date format.
+
+---
+
+## Verification
+
+- **TypeScript:** FAILS - 3 errors in MyBracketsTable.test.tsx (lock_date references)
+- **Tests:** Cannot run due to TypeScript errors
+- **Coding Standards:** next-env.d.ts modification violates standard
+
+---
+
+## Proposed Standards
+
+None. The migration documentation pattern used here is already the expected standard.
+
+---
+
+## Verdict
+
+**Status:** CHANGES_REQUESTED
+
+Three issues need to be addressed before merge:
+
+1. **[HIGH] Fix TypeScript errors** - Remove `lock_date` from test fixtures in `MyBracketsTable.test.tsx`
+2. **[HIGH] Fix import script** - Remove `lock_date` references from `import-state-tournaments.ts`
+3. **[MEDIUM] Revert next-env.d.ts** - This auto-generated file change should not be committed
+
+The architectural design is solid and the implementation is well-documented. Once these issues are fixed, re-run the review for approval.
+
+---
+
+---
+
 # PR Review - Admin UI Improvements (Final - State Dropdown + Sorting)
 
 **Review Date:** 2026-01-15

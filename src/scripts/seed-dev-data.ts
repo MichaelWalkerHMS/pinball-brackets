@@ -83,7 +83,6 @@ const TOURNAMENT_DATA = {
   name: '2026 Michigan State Championship',
   state: 'MI',
   year: 2026,
-  lock_date: '2026-01-17T12:00:00-05:00',
   start_date: '2026-01-17T13:00:00-05:00',
   end_date: '2026-01-18T20:00:00-05:00',
   player_count: 24,

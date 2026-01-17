@@ -62,18 +62,13 @@ export async function saveBracket(
     return { bracket: null, error: "Not authenticated" };
   }
 
-  // Check lock status
-  const { data: tournament } = await supabase
-    .from("tournaments")
-    .select("lock_date")
-    .eq("id", data.tournamentId)
-    .single();
+  // Check lock status by checking if results exist
+  const { count: resultCount } = await supabase
+    .from("results")
+    .select("*", { count: "exact", head: true })
+    .eq("tournament_id", data.tournamentId);
 
-  if (!tournament) {
-    return { bracket: null, error: "Tournament not found" };
-  }
-
-  if (new Date(tournament.lock_date) <= new Date()) {
+  if ((resultCount ?? 0) > 0) {
     return { bracket: null, error: "Predictions are locked" };
   }
 
@@ -155,24 +150,20 @@ export async function saveBracket(
 
 /**
  * Check if predictions are locked for a tournament
+ * Tournament is locked when it has at least one result
  */
 export async function checkLockStatus(
   tournamentId: string
-): Promise<{ locked: boolean; lockDate: string | null }> {
+): Promise<{ locked: boolean }> {
   const supabase = await createClient();
 
-  const { data: tournament } = await supabase
-    .from("tournaments")
-    .select("lock_date")
-    .eq("id", tournamentId)
-    .single();
+  const { count } = await supabase
+    .from("results")
+    .select("*", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId);
 
-  if (!tournament) {
-    return { locked: true, lockDate: null };
-  }
-
-  const isLocked = new Date(tournament.lock_date) <= new Date();
-  return { locked: isLocked, lockDate: tournament.lock_date };
+  const isLocked = (count ?? 0) > 0;
+  return { locked: isLocked };
 }
 
 /**
@@ -276,7 +267,6 @@ export async function loadUserBrackets(): Promise<DashboardBracket[]> {
         state,
         year,
         player_count,
-        lock_date,
         status
       )
     `)
@@ -311,6 +301,16 @@ export async function loadUserBrackets(): Promise<DashboardBracket[]> {
     });
   }
 
+  // Check lock status for each tournament (tournament is locked if it has results)
+  const lockStatusMap = new Map<string, boolean>();
+  for (const tournamentId of tournamentIds) {
+    const { count } = await supabase
+      .from("results")
+      .select("*", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId);
+    lockStatusMap.set(tournamentId, (count ?? 0) > 0);
+  }
+
   // Transform to DashboardBracket format
   return brackets.map((b) => {
     const tournament = Array.isArray(b.tournaments) ? b.tournaments[0] : b.tournaments;
@@ -318,7 +318,7 @@ export async function loadUserBrackets(): Promise<DashboardBracket[]> {
     // 24 players = 24 picks, 16 players = 16 picks
     const expectedPicks = playerCount === 16 ? 16 : 24;
     const pickCount = pickCountMap.get(b.id) || 0;
-    const isLocked = new Date(tournament?.lock_date || "") <= new Date();
+    const isLocked = lockStatusMap.get(b.tournament_id) ?? false;
 
     return {
       id: b.id,
@@ -328,7 +328,6 @@ export async function loadUserBrackets(): Promise<DashboardBracket[]> {
       tournament_state: tournament?.state || "",
       tournament_year: tournament?.year || new Date().getFullYear(),
       player_count: playerCount,
-      lock_date: tournament?.lock_date || "",
       tournament_status: tournament?.status || "upcoming",
       pick_count: pickCount,
       expected_picks: expectedPicks,
@@ -399,18 +398,13 @@ export async function createBracket(
     return { bracket: null, error: "Not authenticated" };
   }
 
-  // Check lock status
-  const { data: tournament } = await supabase
-    .from("tournaments")
-    .select("lock_date")
-    .eq("id", tournamentId)
-    .single();
+  // Check lock status by checking if results exist
+  const { count: resultCount } = await supabase
+    .from("results")
+    .select("*", { count: "exact", head: true })
+    .eq("tournament_id", tournamentId);
 
-  if (!tournament) {
-    return { bracket: null, error: "Tournament not found" };
-  }
-
-  if (new Date(tournament.lock_date) <= new Date()) {
+  if ((resultCount ?? 0) > 0) {
     return { bracket: null, error: "Predictions are locked" };
   }
 

@@ -34,9 +34,6 @@ export default function TournamentForm({
     name: tournament?.name || "",
     state: tournament?.state || "Michigan",
     year: tournament?.year || new Date().getFullYear(),
-    lock_date: tournament?.lock_date
-      ? formatDateTimeLocal(tournament.lock_date)
-      : "",
     start_date: tournament?.start_date
       ? formatDateTimeLocal(tournament.start_date)
       : "",
@@ -231,25 +228,7 @@ export default function TournamentForm({
       </div>
 
       {/* Dates */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label
-            htmlFor="lock_date"
-            className="block text-sm font-medium text-[rgb(var(--color-text-secondary))] mb-1"
-          >
-            Predictions Lock
-          </label>
-          <input
-            type="datetime-local"
-            id="lock_date"
-            value={formData.lock_date}
-            onChange={(e) =>
-              setFormData({ ...formData, lock_date: e.target.value })
-            }
-            className="w-full px-3 py-2 border border-[rgb(var(--color-border-secondary))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))]"
-            required
-          />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label
             htmlFor="start_date"

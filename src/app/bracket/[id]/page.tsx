@@ -197,8 +197,8 @@ export default async function BracketPage({ params }: PageProps) {
   const ownerName = ownerProfile?.display_name || "Anonymous";
   const bracketName = bracket.name || null;
 
-  // Check if predictions are locked
-  const isLocked = new Date(tournament.lock_date) <= new Date();
+  // Check if predictions are locked (locked when results exist)
+  const isLocked = (results?.length ?? 0) > 0;
 
   return (
     <main className="min-h-screen p-4 md:p-8">

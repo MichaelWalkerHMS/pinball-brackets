@@ -167,10 +167,6 @@ export default function TournamentOverview({
             <dd className="font-medium text-[rgb(var(--color-text-primary))]">{tournament.timezone}</dd>
           </div>
           <div>
-            <dt className="text-sm text-[rgb(var(--color-text-muted))]">Predictions Lock</dt>
-            <dd className="font-medium text-[rgb(var(--color-text-primary))]">{formatDate(tournament.lock_date)}</dd>
-          </div>
-          <div>
             <dt className="text-sm text-[rgb(var(--color-text-muted))]">Start Date</dt>
             <dd className="font-medium text-[rgb(var(--color-text-primary))]">{formatDate(tournament.start_date)}</dd>
           </div>

@@ -180,10 +180,11 @@ test.describe('Dashboard', () => {
     const tournamentDropdown = page.locator('select').nth(1)
     await tournamentDropdown.selectOption({ index: 1 })
 
-    // Tournament details should appear (player count, lock time)
+    // Tournament details should appear (player count, status)
     // Use .first() because player count appears in both My Brackets table and TournamentDetails
     await expect(page.getByText(/\d+ players/).first()).toBeVisible()
-    await expect(page.getByText(/Lock/i)).toBeVisible()
+    // Tournament shows "Open" or "Locked" status
+    await expect(page.getByText(/Open|Locked/i).first()).toBeVisible()
   })
 
   test('can create new bracket and navigate to edit page', async ({ page }) => {

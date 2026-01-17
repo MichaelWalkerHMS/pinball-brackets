@@ -29,20 +29,13 @@ export default async function TournamentHubPage({ params }: PageProps) {
     notFound();
   }
 
-  // Check if predictions are locked
-  const isLocked = new Date(tournament.lock_date) <= new Date();
+  // Check if predictions are locked (locked when results exist)
+  const { count: resultCount } = await supabase
+    .from("results")
+    .select("*", { count: "exact", head: true })
+    .eq("tournament_id", id);
 
-  // Format dates for display
-  const lockDate = new Date(tournament.lock_date);
-  const formattedLockDate = lockDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
+  const isLocked = (resultCount ?? 0) > 0;
 
   // Fetch leaderboard data
   const { entries, userBracketIds } = await getLeaderboard(id);
@@ -70,11 +63,6 @@ export default async function TournamentHubPage({ params }: PageProps) {
               {isLocked ? "Predictions Locked" : "Predictions Open"}
             </span>
           </p>
-          {!isLocked && (
-            <p className="text-xs sm:text-sm text-[rgb(var(--color-text-muted))] mt-1">
-              Lock date: {formattedLockDate}
-            </p>
-          )}
         </div>
         <div className="flex-shrink-0">
           <ResponsiveHeader />

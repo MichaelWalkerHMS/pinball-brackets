@@ -46,6 +46,16 @@ export default async function Home() {
 
         {/* Content with max-width */}
         <div className="max-w-4xl mx-auto">
+          {/* Championship Banner */}
+          <div className="mb-6 p-4 bg-[rgb(var(--color-warning-bg-light))] border border-[rgb(var(--color-warning-border))] rounded-lg">
+            <p className="font-medium text-[rgb(var(--color-warning-text))]">
+              Congratulations to everyone participating in today and tomorrow&apos;s championships. Good luck!
+            </p>
+            <p className="mt-2 text-sm text-[rgb(var(--color-warning-text))]">
+              Last-minute changes to participants will impact the seeding and your brackets - there is no perfect way to auto-adjust them, so please review them prior to the tournament start if you want to make any changes.
+            </p>
+          </div>
+
           {/* My Brackets Section */}
           <div className="mb-8 p-6 border border-[rgb(var(--color-border-primary))] rounded-lg bg-[rgb(var(--color-bg-primary))]">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -97,6 +107,16 @@ export default async function Home() {
         <br />
         Prove it by making free March Madness-style brackets!
       </p>
+
+      {/* Championship Banner */}
+      <div className="mb-6 p-4 bg-[rgb(var(--color-warning-bg-light))] border border-[rgb(var(--color-warning-border))] rounded-lg max-w-2xl w-full">
+        <p className="font-medium text-[rgb(var(--color-warning-text))]">
+          Congratulations to everyone participating in today and tomorrow&apos;s championships. Good luck!
+        </p>
+        <p className="mt-2 text-sm text-[rgb(var(--color-warning-text))]">
+          Last-minute changes to participants will impact the seeding and your brackets - there is no perfect way to auto-adjust them, so please review them prior to the tournament start if you want to make any changes.
+        </p>
+      </div>
 
       {/* Tournament wizard */}
       <div className="mt-4 p-6 border border-[rgb(var(--color-border-primary))] rounded-lg max-w-2xl w-full bg-[rgb(var(--color-bg-primary))]">

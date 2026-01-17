@@ -1,3 +1,110 @@
+# PR Review - Improved Lock Status Messaging
+
+**Review Date:** 2026-01-17
+**Branch:** feature/results-based-locking
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of max 5
+
+---
+
+## Summary
+
+This PR updates the locked status message across three files to improve user communication when predictions are locked. The text changes from "Predictions Locked" / "Locked" to "Locked - Results Coming In" with a tooltip explaining "Now that results are coming in, no changes are allowed to brackets. Good luck!" This is a clean, focused UX improvement with no functional changes.
+
+---
+
+## Findings
+
+### CRITICAL
+
+None.
+
+---
+
+### HIGH
+
+None.
+
+---
+
+### MEDIUM
+
+None.
+
+---
+
+### LOW
+
+None.
+
+---
+
+### PRAISE
+
+#### Consistent Implementation Across All Three Files
+
+**Files:** `src/app/tournament/[id]/page.tsx`, `src/app/bracket/[id]/edit/page.tsx`, `src/components/dashboard/TournamentDetails.tsx`
+
+The changes are consistently applied across all locations where the lock status is displayed:
+- Same message text: "Locked - Results Coming In"
+- Same tooltip text explaining the lock status
+- Proper use of `title` attribute for native browser tooltip
+- Correct conditional logic (`isLocked ? "tooltip text" : undefined`)
+
+#### Proper CSS Variable Usage
+
+All existing styling remains intact and uses CSS variables correctly:
+- `text-[rgb(var(--color-error-icon))]` for locked state
+- `text-[rgb(var(--color-success-icon))]` for open state
+
+This follows the established coding standard for colors.
+
+#### Clean, Minimal Diff
+
+The changes are focused and minimal - only changing the display text and adding the title attribute. No unnecessary refactoring or unrelated changes were included.
+
+#### User-Friendly Messaging
+
+The new messaging is more informative than the previous "Locked" / "Predictions Locked":
+- "Locked - Results Coming In" clearly indicates WHY the bracket is locked
+- The tooltip provides additional context with a friendly "Good luck!" message
+- Users understand this is not an error condition but a normal tournament state
+
+---
+
+## Verification
+
+- **Tests:** All 255 tests pass
+- **TypeScript:** No type errors
+- **Coding Standards:** Follows CSS variable pattern correctly
+- **No regression:** Existing functionality unchanged
+
+---
+
+## Proposed Standards
+
+None. This implementation follows existing patterns well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+This is a clean, focused UX improvement that enhances user communication without any functional changes. Key strengths:
+
+1. **Consistent** - Same message and tooltip across all three locations
+2. **Informative** - Clearly explains why the bracket is locked
+3. **Minimal** - No unnecessary changes
+4. **Accessible** - Uses native browser tooltip via `title` attribute
+5. **All tests pass** - No regressions
+
+Ready to push.
+
+---
+
+---
+
 # PR Review - Replace lock_date with Results-Based Locking
 
 **Review Date:** 2026-01-17

@@ -24,6 +24,7 @@ export default async function AdminDashboard() {
   // Group by status
   const upcoming = tournamentList.filter((t) => t.status === "upcoming");
   const inProgress = tournamentList.filter((t) => t.status === "in_progress");
+  const completedIncomplete = tournamentList.filter((t) => t.status === "completed - results incomplete");
   const completed = tournamentList.filter((t) => t.status === "completed");
 
   return (
@@ -61,6 +62,14 @@ export default async function AdminDashboard() {
 
       {upcoming.length > 0 && (
         <UpcomingTournaments tournaments={upcoming} />
+      )}
+
+      {completedIncomplete.length > 0 && (
+        <TournamentSection
+          title="Completed - Results Incomplete"
+          tournaments={completedIncomplete}
+          badgeColor="bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning-text))]"
+        />
       )}
 
       {completed.length > 0 && (

@@ -1,3 +1,314 @@
+# PR Review - Admin Tournament Updates + Bulk Results Status Transition
+
+**Review Date:** 2026-01-18
+**Branch:** fix/admin-update-tournaments-policy
+**Reviewer:** Code Review Agent
+**Iteration:** 3 of max 5
+
+---
+
+## Summary
+
+This PR contains two related fixes:
+1. **RLS Policy:** Allows admins to update the `tournaments` table (migration file) - previously reviewed and approved
+2. **Bulk Results Route:** Adds missing status transition logic to auto-transition tournaments from 'upcoming' to 'in_progress' when results are synced via the bulk route
+
+The TypeScript changes in `bulk-results/route.ts` follow the exact same pattern established in the single-tournament `results/route.ts`, ensuring consistency across both sync paths. The implementation is minimal and focused.
+
+**All checks pass. This PR is APPROVED.**
+
+---
+
+## Full PR Changes Reviewed
+
+| File | Change |
+|------|--------|
+| `supabase/migrations/20260118192324_admin_update_tournaments_policy.sql` | New RLS policy (reviewed in iterations 1-2) |
+| `src/app/api/matchplay/bulk-results/route.ts` | Added status field to query, added status transition logic |
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+None.
+
+---
+
+### 🟢 Praise
+
+#### Consistent Pattern with Single-Tournament Route
+**File:** `src/app/api/matchplay/bulk-results/route.ts` (lines 227-238)
+
+The status transition logic exactly mirrors the pattern in `results/route.ts` (lines 177-187):
+- Same condition check: `tournament.status === 'upcoming'`
+- Same update operation: `update({ status: 'in_progress' })`
+- Same error handling: `console.warn` with descriptive message
+- Same placement: after `recalculateScores()` is called
+
+This consistency makes the codebase easier to maintain and reason about.
+
+#### Minimal and Focused Changes
+The changes are surgical:
+1. Added `status` to the select query (line 84)
+2. Added the status transition block (lines 228-238)
+
+No unrelated changes, no over-engineering.
+
+#### Correct Conditional Logic
+The transition only happens when:
+1. Results were actually imported (`result.imported > 0`)
+2. Tournament was in 'upcoming' status
+
+This prevents unnecessary database calls and ensures the status only changes when meaningful work was done.
+
+#### Graceful Error Handling
+The status transition failure is logged as a warning rather than failing the entire operation. This is appropriate because:
+- The main work (importing results and recalculating scores) succeeded
+- The status transition is a secondary concern
+- The error message includes the tournament ID for debugging
+
+---
+
+## Proposed Standards
+
+None.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+Both components of this PR are ready for merge:
+1. The RLS migration was approved in iteration 2 after fixing the auth.uid() optimization
+2. The TypeScript changes follow established patterns and are well-implemented
+
+---
+
+# PR Review - Admin Update Tournaments RLS Policy
+
+**Review Date:** 2026-01-18
+**Branch:** fix/admin-update-tournaments-policy
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of max 5
+
+---
+
+## Summary
+
+This PR adds an RLS policy to allow admins to update the `tournaments` table. This fixes a bug where the auto-transition from 'upcoming' to 'in_progress' status during result sync was silently failing due to missing RLS permissions.
+
+The blocking HIGH issue from iteration 1 (missing `(select auth.uid())` optimization) has been fixed. The MEDIUM issue about WITH CHECK has been re-evaluated: upon closer inspection, the codebase is inconsistent on this pattern. The `Admins can update brackets` policy (the most analogous to this new policy) does NOT include a WITH CHECK clause, so the new migration correctly follows that pattern.
+
+**All checks pass. This PR is APPROVED.**
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+None.
+
+---
+
+### 🟢 Praise
+
+#### auth.uid() Optimization Fixed
+**File:** `supabase/migrations/20260118192324_admin_update_tournaments_policy.sql` (line 7)
+
+The code now correctly uses `(select auth.uid())` instead of `auth.uid()`, matching the established pattern from `20260110200000_optimize_rls_auth_functions.sql`. This prevents per-row re-evaluation of the auth function.
+
+#### Consistent with Existing Admin Update Policies
+The policy structure matches the existing `Admins can update brackets` policy - using only a `USING` clause without an explicit `WITH CHECK`. This is appropriate for a general admin update policy (as opposed to the picks policy which validates specific field constraints).
+
+#### Good Documentation Comment
+The migration includes a clear comment explaining why this policy is needed ("for status transitions during result sync"). This follows the coding standard for documenting migrations.
+
+#### Correct Security Model
+The policy correctly uses the `profiles.is_admin` check pattern that's established in the codebase, ensuring only authenticated admin users can update tournaments.
+
+---
+
+## Iteration 1 Issue Resolution
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Missing `(select auth.uid())` optimization | HIGH | FIXED - Now uses subquery pattern |
+| Missing WITH CHECK clause | MEDIUM | RESOLVED - Pattern matches `Admins can update brackets` policy which also omits WITH CHECK |
+
+---
+
+## Proposed Standards
+
+None.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+All blocking issues have been resolved. The migration follows established codebase patterns for RLS policies.
+
+---
+
+# PR Review - Admin Update Tournaments RLS Policy (Iteration 1)
+
+**Review Date:** 2026-01-18
+**Branch:** fix/admin-update-tournaments-policy
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR adds an RLS policy to allow admins to update the `tournaments` table. This fixes a bug where the auto-transition from 'upcoming' to 'in_progress' status during result sync was silently failing due to missing RLS permissions.
+
+The fix is correct in intent and addresses a real security gap. However, the implementation doesn't follow established codebase patterns for RLS policies.
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+#### Missing auth.uid() Optimization
+**File:** `supabase/migrations/20260118192324_admin_update_tournaments_policy.sql` (line 7)
+
+**Issue:**
+The policy uses `auth.uid()` directly instead of wrapping it in a subquery `(select auth.uid())`.
+
+**Why it matters:**
+The codebase has an established pattern (documented in migration `20260110200000_optimize_rls_auth_functions.sql`) that wraps `auth.uid()` in a subquery to prevent per-row re-evaluation. Without this optimization, `auth.uid()` is called for every row scanned, which impacts performance. While this may seem minor for a small table like `tournaments`, consistency is important for maintainability and to prevent the pattern from drifting.
+
+**Current code:**
+```sql
+WHERE profiles.id = auth.uid()
+```
+
+**Suggested fix:**
+```sql
+WHERE profiles.id = (select auth.uid())
+```
+
+---
+
+### 🟡 Medium
+
+#### Missing WITH CHECK Clause
+**File:** `supabase/migrations/20260118192324_admin_update_tournaments_policy.sql` (lines 2-10)
+
+**Issue:**
+The policy only has a `USING` clause but no `WITH CHECK` clause.
+
+**Why it matters:**
+For UPDATE policies, `USING` controls which rows can be selected for update, and `WITH CHECK` validates the new row values. While PostgreSQL defaults `WITH CHECK` to the `USING` expression when omitted, the existing admin policy pattern in this codebase (see `20260106120000_admin_update_picks_policy.sql` which was then updated in `20260110200000_optimize_rls_auth_functions.sql`) explicitly includes both clauses. Being explicit improves readability and makes the security intent clear.
+
+**Suggested fix:**
+Add `WITH CHECK` clause matching the `USING` clause:
+```sql
+CREATE POLICY "Admins can update tournaments" ON tournaments
+FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = (select auth.uid())
+    AND profiles.is_admin = true
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = (select auth.uid())
+    AND profiles.is_admin = true
+  )
+);
+```
+
+---
+
+### 🔵 Low
+
+None.
+
+---
+
+### 🟢 Praise
+
+#### Good Documentation Comment
+**File:** `supabase/migrations/20260118192324_admin_update_tournaments_policy.sql` (line 1)
+
+The migration includes a clear comment explaining why this policy is needed ("for status transitions during result sync"). This follows the coding standard for documenting migrations.
+
+#### Correct Security Model
+The policy correctly uses the `profiles.is_admin` check pattern that's established in the codebase, ensuring only authenticated admin users can update tournaments.
+
+---
+
+## Proposed Standards
+
+None. The patterns being enforced here are already documented in existing migrations and coding-standards.md.
+
+---
+
+## Verdict
+
+**Status:** CHANGES REQUESTED
+
+**Blocking issues:**
+1. Missing `(select auth.uid())` optimization - inconsistent with established codebase pattern
+
+**Non-blocking but recommended:**
+1. Add explicit `WITH CHECK` clause for consistency with existing admin policies
+
+---
+
 # PR Review - Public Leaderboard View for Completed Tournaments
 
 **Review Date:** 2026-01-18

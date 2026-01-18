@@ -81,7 +81,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSyncR
   // Find tournaments with Match Play IDs, applying optional filters
   let query = supabase
     .from('tournaments')
-    .select('id, name, matchplay_id, player_count')
+    .select('id, name, matchplay_id, player_count, status')
     .not('matchplay_id', 'is', null);
 
   if (tournamentType) {
@@ -224,6 +224,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSyncR
     // Recalculate scores for this tournament
     if (result.imported > 0) {
       await recalculateScores(tournament.id);
+
+      // If tournament was upcoming, transition to in_progress
+      if (tournament.status === 'upcoming') {
+        const { error: statusError } = await supabase
+          .from('tournaments')
+          .update({ status: 'in_progress' })
+          .eq('id', tournament.id);
+
+        if (statusError) {
+          console.warn(`Failed to transition tournament ${tournament.id} to in_progress:`, statusError.message);
+        }
+      }
     }
 
     results.push(result);

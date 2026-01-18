@@ -1,3 +1,309 @@
+# PR Review - Allow Bracket Metadata Editing When Locked
+
+**Review Date:** 2026-01-18
+**Branch:** (uncommitted changes on main)
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of max 5
+
+---
+
+## Summary
+
+This PR enables users to edit bracket metadata (name, is_public) even after a tournament is locked, while still protecting prediction data (picks, final scores). The implementation now includes proper defense-in-depth with a database trigger that preserves prediction columns when the tournament has results.
+
+The critical issue from iteration 1 (overly permissive RLS policy) has been addressed by adding a `protect_bracket_predictions` trigger that silently preserves `final_winner_games` and `final_loser_games` values when results exist. This provides database-level protection regardless of how updates are attempted.
+
+**All blocking issues have been resolved. This PR is APPROVED.**
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+#### Migration: Consider Using Empty String for search_path
+**File:** `supabase/migrations/20260118100000_allow_bracket_metadata_updates_when_locked.sql` (line 34)
+
+**Issue:**
+The trigger function uses `SET search_path = public` instead of `SET search_path = ''`.
+
+**Why it matters:**
+While `public` is safe, using an empty string (`''`) is the more secure pattern recommended by Supabase documentation and used elsewhere in this codebase (see coding standards). This prevents any potential search path manipulation.
+
+**Suggested fix:**
+```sql
+SET search_path = ''
+```
+
+This is non-blocking since `public` is a valid and safe choice, but consistency with the codebase pattern would be ideal.
+
+---
+
+### 🟢 Praise
+
+#### Trigger-Based Protection Pattern
+**File:** `supabase/migrations/20260118100000_allow_bracket_metadata_updates_when_locked.sql` (lines 30-56)
+
+The trigger implementation is clean and effective:
+- Uses `SECURITY DEFINER` appropriately
+- Sets `search_path` to prevent path manipulation
+- Silently preserves values (no error thrown) which provides better UX
+- Clear comments explain the purpose
+- Properly drops existing trigger before creating
+
+This is exactly the pattern suggested in iteration 1 and implements defense-in-depth correctly.
+
+#### Well-Structured Application Layer
+**File:** `src/app/tournament/[id]/actions.ts` (lines 75-101)
+
+The `saveBracket()` function cleanly implements the business logic:
+- Early rejection for new brackets when locked
+- Metadata-only update path for existing brackets when locked
+- Full update path when not locked
+- Proper ownership verification with `.eq("user_id", user.id)`
+
+The code is readable and maintainable.
+
+#### Clear Documentation
+**File:** `supabase/migrations/20260118100000_allow_bracket_metadata_updates_when_locked.sql` (lines 1-11)
+
+Excellent migration documentation explaining:
+- What the migration does
+- The security model (picks at RLS, final games at trigger, metadata always editable)
+- Why each layer of protection exists
+
+This follows established coding standards.
+
+#### Minimal UI Changes
+**File:** `src/components/bracket/Bracket.tsx`
+
+The UI changes are surgical and focused:
+- Removed only the lock-related disabling logic
+- Kept all other functionality intact
+- No unnecessary refactoring
+
+---
+
+## Iteration 1 Issues - Resolution Status
+
+| Issue | Status | Resolution |
+|-------|--------|------------|
+| CRITICAL: RLS allows prediction column updates | ✅ FIXED | Added `protect_bracket_predictions` trigger that preserves prediction columns when results exist |
+
+---
+
+## Proposed Standards
+
+None for this review. The trigger pattern for protecting columns is already well-documented in the migration itself.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+All critical and high issues from iteration 1 have been resolved. The database trigger provides defense-in-depth protection for prediction columns, and the implementation follows established coding patterns.
+
+The one LOW finding (search_path consistency) is non-blocking and can optionally be addressed.
+
+---
+
+---
+
+# PR Review - Allow Bracket Metadata Editing When Locked
+
+**Review Date:** 2026-01-18
+**Branch:** (uncommitted changes on main)
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR enables users to edit bracket metadata (name, is_public) even after a tournament is locked, while still protecting prediction data (picks, final scores). The changes include a new database migration that relaxes the RLS policy on brackets, updates to `saveBracket()` to implement metadata-only updates when locked, and UI changes to enable the name input, public toggle, and save button.
+
+The implementation has one **CRITICAL** security issue that must be fixed: the new RLS policy allows updates to ALL columns on the brackets table when locked, including `final_winner_games` and `final_loser_games` prediction columns. While the application layer protects these, direct database access would bypass this protection.
+
+---
+
+## Findings
+
+### CRITICAL
+
+#### Overly Permissive RLS Policy Allows Prediction Column Updates
+**File:** `supabase/migrations/20260118100000_allow_bracket_metadata_updates_when_locked.sql` (lines 22-24)
+
+**Issue:**
+The new RLS policy allows owners to update ANY column on their brackets:
+
+```sql
+CREATE POLICY "Users can update own brackets" ON brackets
+FOR UPDATE
+USING (user_id = (select auth.uid()));
+```
+
+This allows updating `final_winner_games` and `final_loser_games` (prediction columns) via direct database access, bypassing the application-layer protection in `saveBracket()`.
+
+**Why it matters:**
+A user with knowledge of the database schema could use the Supabase client directly (or any tool like `curl` with their JWT) to modify their final score predictions after results come in. This defeats the purpose of locking predictions and undermines the integrity of the bracket competition.
+
+**Suggested fix:**
+Use a column-level restriction in the policy. The simplest approach is to keep the restrictive policy for when results exist and create a new permissive policy that only allows metadata updates:
+
+```sql
+-- Drop the old restrictive policy
+DROP POLICY IF EXISTS "Users can update own brackets before lock" ON brackets;
+
+-- Policy for updating brackets when NOT locked (full updates allowed)
+CREATE POLICY "Users can fully update own brackets before lock" ON brackets
+FOR UPDATE
+USING (
+  user_id = (select auth.uid())
+  AND NOT EXISTS (
+    SELECT 1 FROM results
+    WHERE results.tournament_id = tournament_id
+  )
+);
+
+-- Policy for updating ONLY metadata columns when locked
+-- Uses WITH CHECK to ensure prediction columns aren't changed
+CREATE POLICY "Users can update own bracket metadata when locked" ON brackets
+FOR UPDATE
+USING (user_id = (select auth.uid()))
+WITH CHECK (
+  -- Either not locked (allow any update)
+  NOT EXISTS (
+    SELECT 1 FROM results
+    WHERE results.tournament_id = tournament_id
+  )
+  -- Or locked, but prediction columns unchanged
+  OR (
+    final_winner_games IS NOT DISTINCT FROM (SELECT final_winner_games FROM brackets WHERE id = brackets.id)
+    AND final_loser_games IS NOT DISTINCT FROM (SELECT final_loser_games FROM brackets WHERE id = brackets.id)
+  )
+);
+```
+
+**Alternative simpler approach:** PostgreSQL doesn't natively support column-level RLS, but you can use a trigger to enforce this:
+
+```sql
+CREATE OR REPLACE FUNCTION prevent_prediction_updates_when_locked()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM results
+    WHERE results.tournament_id = NEW.tournament_id
+  ) THEN
+    -- When locked, preserve prediction columns
+    NEW.final_winner_games := OLD.final_winner_games;
+    NEW.final_loser_games := OLD.final_loser_games;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+CREATE TRIGGER enforce_prediction_lock
+BEFORE UPDATE ON brackets
+FOR EACH ROW
+EXECUTE FUNCTION prevent_prediction_updates_when_locked();
+```
+
+This trigger approach is cleaner as it enforces the invariant at the database level regardless of what columns are in the UPDATE statement.
+
+---
+
+### HIGH
+
+None.
+
+---
+
+### MEDIUM
+
+None.
+
+---
+
+### LOW
+
+None.
+
+---
+
+### PRAISE
+
+#### Clear Migration Documentation
+**File:** `supabase/migrations/20260118100000_allow_bracket_metadata_updates_when_locked.sql` (lines 1-11)
+
+The migration includes excellent documentation explaining:
+- What the migration does
+- The security model (picks protected at RLS, final games at application layer)
+- Why metadata is always editable
+
+This follows the established coding standard for migration documentation.
+
+#### Well-Structured Application Layer Protection
+**File:** `src/app/tournament/[id]/actions.ts` (lines 69-101)
+
+The `saveBracket()` function cleanly separates the locked and unlocked code paths:
+- Clear early return for locked + new bracket (reject)
+- Metadata-only update path for locked + existing bracket
+- Full update path for unlocked
+
+The code is readable and the intent is clear. The ownership check (`.eq("user_id", user.id)`) is properly applied.
+
+#### Clean UI Changes
+**File:** `src/components/bracket/Bracket.tsx`
+
+The UI changes are minimal and focused:
+- Removed `disabled={isLocked}` from name input
+- Removed lock check from toggle click handler
+- Removed disabled state styling from toggle
+- Removed lock check from save button disabled state
+
+The diff is clean and doesn't introduce any unrelated changes.
+
+---
+
+## Proposed Standards
+
+None for this review.
+
+---
+
+## Verdict
+
+**Status:** CHANGES REQUESTED
+
+The RLS policy change creates a security hole where prediction columns (`final_winner_games`, `final_loser_games`) can be modified via direct database access when the tournament is locked. The application layer protection is necessary but not sufficient - defense in depth requires database-level enforcement.
+
+Fix the critical issue by either:
+1. Creating a trigger to enforce prediction column immutability when locked, OR
+2. Restructuring the RLS policies to use WITH CHECK clauses
+
+---
+
+---
+
 # PR Review - Improved Lock Status Messaging
 
 **Review Date:** 2026-01-17

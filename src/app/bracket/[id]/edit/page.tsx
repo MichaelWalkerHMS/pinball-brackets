@@ -168,6 +168,20 @@ export default async function BracketEditPage({ params }: PageProps) {
   // Check if predictions are locked (locked when results exist)
   const isLocked = (results?.length ?? 0) > 0;
 
+  // Query seeding changes AFTER the bracket was last saved
+  const { data: seedingChanges } = await supabase
+    .from("seeding_change_log")
+    .select("affected_seeds, created_at")
+    .eq("tournament_id", bracket.tournament_id)
+    .gt("created_at", bracket.updated_at)
+    .order("created_at", { ascending: false });
+
+  // Collect unique affected seeds and count changes
+  const affectedSeeds = seedingChanges
+    ? [...new Set(seedingChanges.flatMap((c) => c.affected_seeds))]
+    : [];
+  const seedingChangeCount = seedingChanges?.length || 0;
+
   // Get bracket display name
   const bracketDisplayName = userBracket.name || "My Bracket";
 
@@ -212,6 +226,8 @@ export default async function BracketEditPage({ params }: PageProps) {
         results={(results || []) as Result[]}
         isLocked={isLocked}
         isLoggedIn={true}
+        affectedSeeds={affectedSeeds}
+        seedingChangeCount={seedingChangeCount}
       />
     </main>
   );

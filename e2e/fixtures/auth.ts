@@ -1,4 +1,25 @@
-import { Page, expect } from '@playwright/test'
+import { Page, expect, test } from '@playwright/test'
+
+/**
+ * Get test user credentials for the current worker.
+ * Each worker gets its own user to avoid session conflicts.
+ * Uses E2E_TEST_EMAIL_0, E2E_TEST_EMAIL_1, etc.
+ */
+function getTestUserCredentials(): { email: string; password: string } {
+  const workerIndex = test.info().parallelIndex
+
+  const email = process.env[`E2E_TEST_EMAIL_${workerIndex}`]
+  const password = process.env[`E2E_TEST_PASSWORD_${workerIndex}`]
+
+  if (!email || !password) {
+    throw new Error(
+      `Missing credentials for worker ${workerIndex}. ` +
+      `Ensure E2E_TEST_EMAIL_${workerIndex} and E2E_TEST_PASSWORD_${workerIndex} are set in .env.test`
+    )
+  }
+
+  return { email, password }
+}
 
 /**
  * Save the current bracket and wait for confirmation.
@@ -72,17 +93,10 @@ export async function verifyLoggedIn(page: Page): Promise<void> {
 }
 
 /**
- * Login as the E2E test user
+ * Login as the E2E test user for this worker
  */
 export async function login(page: Page): Promise<void> {
-  const email = process.env.E2E_TEST_EMAIL
-  const password = process.env.E2E_TEST_PASSWORD
-
-  if (!email || !password) {
-    throw new Error(
-      'Missing E2E_TEST_EMAIL or E2E_TEST_PASSWORD in environment variables'
-    )
-  }
+  const { email, password } = getTestUserCredentials()
 
   await page.goto('/login')
 

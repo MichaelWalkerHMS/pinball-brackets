@@ -238,8 +238,8 @@ export default async function BracketPage({ params }: PageProps) {
         isLoggedIn={isOwner}
         bracketName={bracketName}
         ownerName={ownerName}
-        affectedSeeds={affectedSeeds}
-        seedingChangeCount={seedingChangeCount}
+        affectedSeeds={isOwner ? affectedSeeds : []}
+        seedingChangeCount={isOwner ? seedingChangeCount : 0}
       />
 
       {/* CTA for logged-out users */}

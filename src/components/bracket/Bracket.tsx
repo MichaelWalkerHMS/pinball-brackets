@@ -298,7 +298,7 @@ export default function BracketView({
         <div className="bg-[rgb(var(--color-warning-bg-light))] border border-[rgb(var(--color-warning-border))] rounded-lg p-3 mb-4 flex items-center gap-2">
           <span className="text-[rgb(var(--color-warning-icon))] text-lg">&#9888;</span>
           <span className="text-[rgb(var(--color-warning-text))]">
-            Seeding changed {seedingChangeCount} {seedingChangeCount === 1 ? 'time' : 'times'} since you last saved. Review your picks.
+            Seeding changed {seedingChangeCount} {seedingChangeCount === 1 ? 'time' : 'times'} since you last saved. Review your picks and press Save when confirmed.
           </span>
         </div>
       )}
@@ -418,6 +418,8 @@ export default function BracketView({
                     if (result.bracket?.id) {
                       setBracketId(result.bracket.id);
                     }
+                    // Refresh to clear seeding change warning (updated_at now after changes)
+                    router.refresh();
                   }
                 }}
                 disabled={isSaving}

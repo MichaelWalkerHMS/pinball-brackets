@@ -19,8 +19,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // Limit workers to avoid race conditions with shared test user session
-  workers: process.env.CI ? 1 : 2,
+  // Each worker gets its own test user account to avoid session conflicts
+  // Requires E2E_TEST_EMAIL_0, E2E_TEST_EMAIL_1, etc. in .env.test
+  workers: process.env.CI ? 1 : 4,
   reporter: process.env.CI ? 'github' : 'html',
 
   globalSetup: './e2e/global-setup.ts',

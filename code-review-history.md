@@ -1,3 +1,191 @@
+# PR Review - Public Leaderboard View for Completed Tournaments
+
+**Review Date:** 2026-01-18
+**Branch:** feature/public-leaderboard-view
+**Reviewer:** Code Review Agent
+**Iteration:** 2 of max 5
+
+---
+
+## Summary
+
+This PR enables all users (logged-in and logged-out) to view leaderboards for completed tournaments by removing the `has_results` filter from tournament lists and conditionally showing the "Create Bracket" button only for tournaments without results.
+
+**Clarification from iteration 1:** The `next-env.d.ts` change was in the working directory but was never committed. The actual commit (`b86c8e3`) contains only the two .tsx files. This has been verified via `git show --name-only HEAD`.
+
+The implementation is clean, follows existing codebase patterns, and maintains proper access control. TypeScript compilation passes with no errors.
+
+**All checks pass. This PR is APPROVED.**
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+None.
+
+---
+
+### 🟢 Praise
+
+#### Clean Conditional UI Logic
+**Files:** `src/components/dashboard/CreateBracketWizard.tsx` (lines 161-209), `src/components/landing/TournamentWizard.tsx` (lines 149-156)
+
+The implementation correctly separates the concerns:
+1. **All tournaments are shown** - Users can browse and view leaderboards for any tournament (open or completed)
+2. **Bracket creation is conditional** - The "Create Bracket" button and Step 3 UI only appear for tournaments without results (`!selectedTournament.has_results`)
+3. **View Leaderboard is always available** - Users can always navigate to view the leaderboard
+
+This is the right approach: it maximizes accessibility for viewing data while properly restricting actions that don't make sense for completed tournaments.
+
+#### Consistent Button Styling
+**File:** `src/components/dashboard/CreateBracketWizard.tsx` (lines 203-208)
+
+The new "View Leaderboard" button correctly uses CSS variables (`--color-accent-primary`, `--color-accent-light`) matching the existing button style in `TournamentWizard.tsx`. This maintains visual consistency across the application.
+
+#### Good Empty State Text
+**Files:** Both wizard files (lines 149 and 125 respectively)
+
+Changed "No open tournaments" to "No tournaments available" - this is more accurate now that all tournaments are shown regardless of status.
+
+#### Proper Security Model
+**File:** `src/app/tournament/[id]/page.tsx`
+
+Verified that the leaderboard page correctly handles both authenticated and unauthenticated users. The page uses Supabase's server client with RLS, so data access is properly controlled at the database level. The CTA section appropriately shows login/signup links for unauthenticated users.
+
+---
+
+## Iteration 1 Issues - Resolution Status
+
+| Issue | Status | Resolution |
+|-------|--------|------------|
+| HIGH: Revert next-env.d.ts | N/A | File was never committed - only in working directory |
+
+---
+
+## Proposed Standards
+
+None.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+The implementation is clean, secure, and follows all established coding standards. The previous HIGH finding was based on working directory state rather than the actual commit contents - the `next-env.d.ts` file was never included in the commit.
+
+**Files reviewed:**
+- `src/components/dashboard/CreateBracketWizard.tsx` - Logged-in user wizard
+- `src/components/landing/TournamentWizard.tsx` - Logged-out user wizard
+
+**Changes verified:**
+- Tournament filtering now shows all tournaments (not just open ones)
+- "Create Bracket" button conditionally hidden for completed tournaments
+- "View Leaderboard" button always available
+- Empty state text updated appropriately
+- CSS variables used correctly (no hardcoded colors)
+- TypeScript compilation passes
+
+---
+
+---
+
+# PR Review - MatchPlay ID Link in Admin Tournament Overview
+
+**Review Date:** 2026-01-18
+**Branch:** feature/matchplay-link-admin
+**Reviewer:** Code Review Agent
+**Iteration:** 1 of max 5
+
+---
+
+## Summary
+
+This PR adds a clickable link to the MatchPlay ID in the admin tournament overview. When a tournament has a `matchplay_id`, the ID is now displayed as an anchor tag that links to `https://app.matchplay.events/tournaments/{matchplay_id}/bracket` and opens in a new tab.
+
+This is a small, well-implemented enhancement that follows existing codebase patterns and coding standards.
+
+**All checks pass. This PR is APPROVED.**
+
+---
+
+## Findings
+
+### 🔴 Critical
+
+None.
+
+---
+
+### 🟠 High
+
+None.
+
+---
+
+### 🟡 Medium
+
+None.
+
+---
+
+### 🔵 Low
+
+None.
+
+---
+
+### 🟢 Praise
+
+#### Clean, Consistent Implementation
+**File:** `src/app/admin/tournament/[id]/TournamentOverview.tsx` (lines 189-197)
+
+The implementation follows established patterns in the codebase:
+
+1. **CSS Variables:** Uses `text-[rgb(var(--color-accent-primary))]` and `hover:text-[rgb(var(--color-accent-hover))]` - correctly following the coding standards for color usage (no hardcoded hex values).
+
+2. **Security Best Practices:** Includes `rel="noopener noreferrer"` on the external link, which prevents the new tab from having access to `window.opener` (potential security issue known as tabnabbing).
+
+3. **Accessibility:** Uses `target="_blank"` appropriately for an external resource that users may want to reference while staying on the admin page.
+
+4. **Minimal Change Footprint:** The change is focused and doesn't introduce unnecessary complexity.
+
+---
+
+## Proposed Standards
+
+None. This PR follows existing standards well.
+
+---
+
+## Verdict
+
+**Status:** APPROVED
+
+The implementation is clean, follows all coding standards (CSS variables, security attributes), and provides useful functionality for administrators. No issues found.
+
+---
+
 # PR Review - Allow Bracket Metadata Editing When Locked
 
 **Review Date:** 2026-01-18

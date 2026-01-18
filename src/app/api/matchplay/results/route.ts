@@ -74,7 +74,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SyncResul
   // Fetch tournament from database
   const { data: tournament, error: tournamentError } = await supabase
     .from('tournaments')
-    .select('id, matchplay_id, player_count')
+    .select('id, matchplay_id, player_count, status')
     .eq('id', tournamentId)
     .single();
 
@@ -171,6 +171,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<SyncResul
       errors.push(`Round ${result.round}, Position ${result.match_position}: ${upsertError.message}`);
     } else {
       importedCount++;
+    }
+  }
+
+  // If tournament was upcoming and we imported results, transition to in_progress
+  if (tournament.status === 'upcoming' && importedCount > 0) {
+    const { error: statusError } = await supabase
+      .from('tournaments')
+      .update({ status: 'in_progress' })
+      .eq('id', tournamentId);
+
+    if (statusError) {
+      console.warn('Failed to transition tournament status to in_progress:', statusError.message);
     }
   }
 

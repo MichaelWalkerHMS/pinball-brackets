@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { PlayerDiff, MappedPlayer } from "@/lib/matchplay";
+import BulkSyncFilters, { type SyncFilters } from "./BulkSyncFilters";
 
 interface TournamentPreview {
   tournament: {
@@ -18,7 +19,7 @@ interface TournamentPreview {
   error?: string;
 }
 
-type Phase = "idle" | "fetching" | "reviewing" | "confirming" | "applying" | "complete";
+type Phase = "idle" | "selecting" | "fetching" | "reviewing" | "confirming" | "applying" | "complete";
 
 interface ReviewDecision {
   tournamentId: string;
@@ -40,6 +41,10 @@ export default function BulkPlayerSyncButton() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<SyncFilters>({
+    tournamentType: "all",
+    status: "all",
+  });
 
   // Fetching state
   const [allTournaments, setAllTournaments] = useState<TournamentPreview[]>([]);
@@ -56,6 +61,15 @@ export default function BulkPlayerSyncButton() {
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  const handleStartSync = useCallback(() => {
+    setPhase("selecting");
+    setError(null);
+  }, []);
+
+  const handleCancelFilter = useCallback(() => {
+    setPhase("idle");
+  }, []);
+
   const startSync = useCallback(async () => {
     setPhase("fetching");
     setError(null);
@@ -63,9 +77,21 @@ export default function BulkPlayerSyncButton() {
     setDecisions([]);
     setAutoSkippedCount(0);
 
+    // Build filter params
+    const params = new URLSearchParams();
+    if (filters.tournamentType !== "all") {
+      params.set("tournamentType", filters.tournamentType);
+    }
+    if (filters.status !== "all") {
+      params.set("status", filters.status);
+    }
+    const queryString = params.toString();
+    const baseUrl = "/api/matchplay/bulk-players-preview";
+    const listUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+
     try {
-      // First, get list of all MP-linked tournaments
-      const listResponse = await fetch("/api/matchplay/bulk-players-preview");
+      // First, get list of all MP-linked tournaments (filtered)
+      const listResponse = await fetch(listUrl);
       const listData = await listResponse.json();
 
       if (!listResponse.ok) {
@@ -134,7 +160,7 @@ export default function BulkPlayerSyncButton() {
       setError("Failed to connect to server");
       setPhase("idle");
     }
-  }, []);
+  }, [filters]);
 
   const handleAccept = useCallback(() => {
     const current = tournamentsToReview[currentReviewIndex];
@@ -246,7 +272,7 @@ export default function BulkPlayerSyncButton() {
         </div>
         {phase === "idle" && (
           <button
-            onClick={startSync}
+            onClick={handleStartSync}
             className="px-4 py-2 bg-[rgb(var(--color-accent-primary))] text-white rounded-lg hover:bg-[rgb(var(--color-accent-hover))] font-medium flex items-center gap-2 whitespace-nowrap"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -257,10 +283,22 @@ export default function BulkPlayerSyncButton() {
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
-            Sync All Players
+            Sync Players
           </button>
         )}
       </div>
+
+      {/* Filter Selection Phase */}
+      {phase === "selecting" && (
+        <BulkSyncFilters
+          filters={filters}
+          onChange={setFilters}
+          onConfirm={startSync}
+          onCancel={handleCancelFilter}
+          title="Select tournaments to sync players for"
+          confirmLabel="Fetch Players"
+        />
+      )}
 
       {error && (
         <div className="mt-3 p-3 bg-[rgb(var(--color-error-bg-light))] border border-[rgb(var(--color-error-border))] rounded-lg text-[rgb(var(--color-error-text))] text-sm">

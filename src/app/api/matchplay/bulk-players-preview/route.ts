@@ -8,6 +8,7 @@ import {
   MatchPlayError,
 } from "@/lib/matchplay";
 import type { PlayerDiff, MappedPlayer } from "@/lib/matchplay";
+import type { TournamentStatus, TournamentType } from "@/lib/types";
 
 interface TournamentPreview {
   tournament: {
@@ -34,6 +35,11 @@ interface PreviewResponse {
  *
  * Fetches player diff from Match Play for a single tournament.
  * Called sequentially by the client with delays to avoid rate limiting.
+ *
+ * Query params:
+ * - tournamentId: specific tournament to fetch (optional)
+ * - tournamentType: 'open' | 'womens' (optional, for list mode)
+ * - status: tournament status (optional, for list mode)
  */
 export async function GET(
   request: NextRequest
@@ -60,14 +66,25 @@ export async function GET(
   }
 
   const tournamentId = request.nextUrl.searchParams.get("tournamentId");
+  const tournamentType = request.nextUrl.searchParams.get("tournamentType") as TournamentType | null;
+  const status = request.nextUrl.searchParams.get("status") as TournamentStatus | null;
 
-  // If no tournamentId, return list of all tournaments with Match Play IDs
+  // If no tournamentId, return list of tournaments with Match Play IDs (with optional filters)
   if (!tournamentId) {
-    const { data: tournaments, error: fetchError } = await supabase
+    let query = supabase
       .from("tournaments")
       .select("id, name, matchplay_id")
       .not("matchplay_id", "is", null)
       .order("start_date", { ascending: false });
+
+    if (tournamentType) {
+      query = query.eq("tournament_type", tournamentType);
+    }
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    const { data: tournaments, error: fetchError } = await query;
 
     if (fetchError) {
       return NextResponse.json(

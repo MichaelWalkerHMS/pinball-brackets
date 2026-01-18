@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createMatchPlayClient, safeMatchPlayCall, mapMatchPlayGames } from '@/lib/matchplay';
 import { recalculateScores } from '@/lib/scoring';
+import type { TournamentStatus, TournamentType } from '@/lib/types';
 
 // Rate limiting: delay between Match Play API calls to avoid overwhelming their servers
 const FETCH_DELAY_MS = 1500;
@@ -26,11 +27,19 @@ interface BulkSyncResponse {
 /**
  * POST /api/matchplay/bulk-results
  *
- * Sync results from Match Play for all tournaments that have a matchplay_id.
- * Designed for manual triggering and future cron automation.
+ * Sync results from Match Play for tournaments that have a matchplay_id.
+ * Supports filtering by tournament type and status.
+ *
+ * Query params:
+ * - tournamentType: 'open' | 'womens' (optional, defaults to all)
+ * - status: tournament status (optional, defaults to all)
  */
-export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
+export async function POST(request: NextRequest): Promise<NextResponse<BulkSyncResponse>> {
   const supabase = await createClient();
+
+  // Parse filter params
+  const tournamentType = request.nextUrl.searchParams.get('tournamentType') as TournamentType | null;
+  const status = request.nextUrl.searchParams.get('status') as TournamentStatus | null;
 
   // Verify authentication and admin status
   const {
@@ -69,11 +78,20 @@ export async function POST(): Promise<NextResponse<BulkSyncResponse>> {
     );
   }
 
-  // Find all tournaments with Match Play IDs
-  const { data: tournaments, error: fetchError } = await supabase
+  // Find tournaments with Match Play IDs, applying optional filters
+  let query = supabase
     .from('tournaments')
     .select('id, name, matchplay_id, player_count')
     .not('matchplay_id', 'is', null);
+
+  if (tournamentType) {
+    query = query.eq('tournament_type', tournamentType);
+  }
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data: tournaments, error: fetchError } = await query;
 
   if (fetchError) {
     return NextResponse.json(

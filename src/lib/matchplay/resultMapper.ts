@@ -126,6 +126,31 @@ export function getOpeningRoundPosition(seed1: number, seed2: number): number {
 }
 
 /**
+ * Fallback: Get Opening Round position from Match Play game index.
+ *
+ * Used when seed pairings don't match expected values (e.g., when a player
+ * was removed from the bracket, shifting the pairings).
+ *
+ * Match Play index to position mapping for 32-bracket opening round:
+ * 17→7, 18→0, 21→4, 22→3, 25→6, 26→1, 29→5, 30→2
+ *
+ * @returns Position 0-7 if valid opening round index, -1 otherwise
+ */
+export function getOpeningRoundPositionFromIndex(index: number): number {
+  const indexToPosition: Record<number, number> = {
+    17: 7,
+    18: 0,
+    21: 4,
+    22: 3,
+    25: 6,
+    26: 1,
+    29: 5,
+    30: 2,
+  };
+  return indexToPosition[index] ?? -1;
+}
+
+/**
  * Result of extracting winner/loser from a game, including game counts.
  */
 interface GameResult {
@@ -330,10 +355,14 @@ function mapSingleGame(
   // Get position within round
   let position: number;
   if (round === ROUNDS.OPENING) {
-    // For Opening Round, determine position from seeds (index-based doesn't work)
+    // For Opening Round, determine position from seeds first
     position = getOpeningRoundPosition(winnerSeed, loserSeed);
     if (position === -1) {
-      return { error: `Opening round seeds ${winnerSeed} vs ${loserSeed} don't match expected pairings` };
+      // Fallback: use index-based mapping (handles cases where players were removed)
+      position = getOpeningRoundPositionFromIndex(game.index);
+      if (position === -1) {
+        return { error: `Opening round seeds ${winnerSeed} vs ${loserSeed} don't match expected pairings and index ${game.index} is not a valid opening round index` };
+      }
     }
   } else {
     position = getPositionFromIndex(game.index, round);

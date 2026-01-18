@@ -186,7 +186,16 @@ export default function TournamentOverview({
           {tournament.matchplay_id && (
             <div>
               <dt className="text-sm text-[rgb(var(--color-text-muted))]">MatchPlay ID</dt>
-              <dd className="font-medium text-[rgb(var(--color-text-primary))]">{tournament.matchplay_id}</dd>
+              <dd className="font-medium">
+                <a
+                  href={`https://app.matchplay.events/tournaments/${tournament.matchplay_id}/bracket`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[rgb(var(--color-accent-primary))] hover:text-[rgb(var(--color-accent-hover))] hover:underline"
+                >
+                  {tournament.matchplay_id}
+                </a>
+              </dd>
             </div>
           )}
         </dl>

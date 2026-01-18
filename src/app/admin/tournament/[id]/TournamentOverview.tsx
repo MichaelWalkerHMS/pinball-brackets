@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Tournament, TournamentFormData } from "@/lib/types";
+import type { Tournament, TournamentFormData, TournamentStatus, TournamentType } from "@/lib/types";
 import TournamentForm from "@/components/admin/TournamentForm";
 import {
   updateTournament,
   updateTournamentStatus,
+  updateTournamentType,
   toggleTournamentVisibility,
   deleteTournament,
 } from "@/app/admin/actions";
@@ -50,11 +51,19 @@ export default function TournamentOverview({
     return {};
   }
 
-  async function handleStatusChange(
-    status: "upcoming" | "in_progress" | "completed"
-  ) {
+  async function handleStatusChange(status: TournamentStatus) {
     setError(null);
     const result = await updateTournamentStatus(tournament.id, status);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      router.refresh();
+    }
+  }
+
+  async function handleTypeChange(tournamentType: TournamentType) {
+    setError(null);
+    const result = await updateTournamentType(tournament.id, tournamentType);
     if (result.error) {
       setError(result.error);
     } else {
@@ -195,8 +204,8 @@ export default function TournamentOverview({
             <label className="text-sm text-[rgb(var(--color-text-muted))] block mb-2">
               Tournament Status
             </label>
-            <div className="flex gap-2">
-              {(["upcoming", "in_progress", "completed"] as const).map(
+            <div className="flex flex-wrap gap-2">
+              {(["upcoming", "in_progress", "completed", "completed - results incomplete"] as const).map(
                 (status) => (
                   <button
                     key={status}
@@ -211,6 +220,31 @@ export default function TournamentOverview({
                   </button>
                 )
               )}
+            </div>
+          </div>
+
+          {/* Tournament Type */}
+          <div>
+            <label className="text-sm text-[rgb(var(--color-text-muted))] block mb-2">
+              Tournament Type
+            </label>
+            <div className="flex gap-2">
+              {([
+                { value: "open", label: "Open" },
+                { value: "womens", label: "Women's" },
+              ] as const).map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => handleTypeChange(value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    tournament.tournament_type === value
+                      ? "bg-[rgb(var(--color-accent-primary))] text-white"
+                      : "bg-[rgb(var(--color-bg-tertiary))] text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-border-secondary))]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 

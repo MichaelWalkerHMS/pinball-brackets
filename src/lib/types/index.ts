@@ -1,5 +1,8 @@
 // Database row types (matching Supabase schema)
 
+export type TournamentStatus = 'upcoming' | 'in_progress' | 'completed' | 'completed - results incomplete';
+export type TournamentType = 'open' | 'womens';
+
 export interface Tournament {
   id: string;
   name: string;
@@ -8,7 +11,8 @@ export interface Tournament {
   start_date: string;
   end_date: string;
   player_count: number;
-  status: 'upcoming' | 'in_progress' | 'completed';
+  status: TournamentStatus;
+  tournament_type: TournamentType;
   is_active: boolean;
   timezone: string;
   scoring_config: ScoringConfig;
@@ -182,7 +186,7 @@ export interface DashboardBracket {
   tournament_state: string;
   tournament_year: number;
   player_count: number;
-  tournament_status: 'upcoming' | 'in_progress' | 'completed';
+  tournament_status: TournamentStatus;
   pick_count: number;
   expected_picks: number;
   is_complete: boolean;

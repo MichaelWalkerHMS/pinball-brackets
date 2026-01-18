@@ -5,9 +5,15 @@ import BulkSyncButton from "@/components/admin/BulkSyncButton";
 import BulkPlayerSyncButton from "@/components/admin/BulkPlayerSyncButton";
 import UpcomingTournaments from "@/components/admin/UpcomingTournaments";
 import TournamentRow from "@/components/admin/TournamentRow";
+import TournamentTypeFilter from "@/components/admin/TournamentTypeFilter";
 
-export default async function AdminDashboard() {
+interface AdminDashboardProps {
+  searchParams: Promise<{ type?: string }>;
+}
+
+export default async function AdminDashboard({ searchParams }: AdminDashboardProps) {
   const supabase = await createClient();
+  const { type: typeFilter } = await searchParams;
 
   // Fetch all tournaments (admin can see all, including inactive)
   const { data: tournaments, error } = await supabase
@@ -21,11 +27,23 @@ export default async function AdminDashboard() {
 
   const tournamentList = (tournaments || []) as Tournament[];
 
+  // Count by type for filter labels
+  const counts = {
+    all: tournamentList.length,
+    open: tournamentList.filter((t) => t.tournament_type === "open").length,
+    womens: tournamentList.filter((t) => t.tournament_type === "womens").length,
+  };
+
+  // Filter by tournament type if specified
+  const filteredList = typeFilter && (typeFilter === "open" || typeFilter === "womens")
+    ? tournamentList.filter((t) => t.tournament_type === typeFilter)
+    : tournamentList;
+
   // Group by status
-  const upcoming = tournamentList.filter((t) => t.status === "upcoming");
-  const inProgress = tournamentList.filter((t) => t.status === "in_progress");
-  const completedIncomplete = tournamentList.filter((t) => t.status === "completed - results incomplete");
-  const completed = tournamentList.filter((t) => t.status === "completed");
+  const upcoming = filteredList.filter((t) => t.status === "upcoming");
+  const inProgress = filteredList.filter((t) => t.status === "in_progress");
+  const completedIncomplete = filteredList.filter((t) => t.status === "completed - results incomplete");
+  const completed = filteredList.filter((t) => t.status === "completed");
 
   return (
     <div>
@@ -49,6 +67,11 @@ export default async function AdminDashboard() {
       <div className="mb-6 space-y-4">
         <BulkPlayerSyncButton />
         <BulkSyncButton />
+      </div>
+
+      {/* Tournament Type Filter */}
+      <div className="mb-6">
+        <TournamentTypeFilter counts={counts} />
       </div>
 
       {/* Tournament Sections */}
@@ -80,15 +103,21 @@ export default async function AdminDashboard() {
         />
       )}
 
-      {tournamentList.length === 0 && (
+      {filteredList.length === 0 && (
         <div className="text-center py-12 bg-[rgb(var(--color-bg-primary))] rounded-lg border border-[rgb(var(--color-border-primary))]">
-          <p className="text-[rgb(var(--color-text-muted))]">No tournaments yet.</p>
-          <Link
-            href="/admin/tournament/new"
-            className="text-[rgb(var(--color-accent-primary))] hover:underline mt-2 inline-block"
-          >
-            Create your first tournament
-          </Link>
+          <p className="text-[rgb(var(--color-text-muted))]">
+            {typeFilter
+              ? `No ${typeFilter === "womens" ? "Women's" : "Open"} tournaments found.`
+              : "No tournaments yet."}
+          </p>
+          {!typeFilter && (
+            <Link
+              href="/admin/tournament/new"
+              className="text-[rgb(var(--color-accent-primary))] hover:underline mt-2 inline-block"
+            >
+              Create your first tournament
+            </Link>
+          )}
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ export const mockTournament: Tournament = {
   end_date: '2026-01-17T18:00:00Z',
   player_count: 24,
   status: 'upcoming',
+  tournament_type: 'open',
   is_active: true,
   timezone: 'America/Detroit',
   scoring_config: {

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { TournamentFormData } from "@/lib/types";
+import type { TournamentFormData, TournamentStatus, TournamentType } from "@/lib/types";
 
 /**
  * Get scoring configuration based on player count.
@@ -189,7 +189,7 @@ export async function deleteTournament(id: string) {
  */
 export async function updateTournamentStatus(
   id: string,
-  status: "upcoming" | "in_progress" | "completed"
+  status: TournamentStatus
 ) {
   const auth = await requireAdmin();
   if ("error" in auth) {
@@ -205,6 +205,35 @@ export async function updateTournamentStatus(
 
   if (error) {
     console.error("Error updating tournament status:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/tournament/${id}`);
+  return { success: true };
+}
+
+/**
+ * Update tournament type (open/womens)
+ */
+export async function updateTournamentType(
+  id: string,
+  tournamentType: TournamentType
+) {
+  const auth = await requireAdmin();
+  if ("error" in auth) {
+    return { error: auth.error };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tournaments")
+    .update({ tournament_type: tournamentType })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error updating tournament type:", error);
     return { error: error.message };
   }
 

@@ -4,6 +4,7 @@ import {
   getRoundFromIndex,
   getPositionFromIndex,
   getOpeningRoundPosition,
+  getOpeningRoundPositionFromIndex,
   mapMatchPlayGames,
   countResultsByRound,
 } from '@/lib/matchplay/resultMapper';
@@ -160,6 +161,29 @@ describe('resultMapper', () => {
     });
   });
 
+  describe('getOpeningRoundPositionFromIndex', () => {
+    it('returns correct position for all valid opening round indices', () => {
+      // Match Play index to position mapping for 32-bracket opening round
+      expect(getOpeningRoundPositionFromIndex(17)).toBe(7);
+      expect(getOpeningRoundPositionFromIndex(18)).toBe(0);
+      expect(getOpeningRoundPositionFromIndex(21)).toBe(4);
+      expect(getOpeningRoundPositionFromIndex(22)).toBe(3);
+      expect(getOpeningRoundPositionFromIndex(25)).toBe(6);
+      expect(getOpeningRoundPositionFromIndex(26)).toBe(1);
+      expect(getOpeningRoundPositionFromIndex(29)).toBe(5);
+      expect(getOpeningRoundPositionFromIndex(30)).toBe(2);
+    });
+
+    it('returns -1 for invalid indices', () => {
+      expect(getOpeningRoundPositionFromIndex(0)).toBe(-1);
+      expect(getOpeningRoundPositionFromIndex(1)).toBe(-1);
+      expect(getOpeningRoundPositionFromIndex(16)).toBe(-1); // Not a valid opening round index
+      expect(getOpeningRoundPositionFromIndex(19)).toBe(-1);
+      expect(getOpeningRoundPositionFromIndex(31)).toBe(-1);
+      expect(getOpeningRoundPositionFromIndex(100)).toBe(-1);
+    });
+  });
+
   describe('mapMatchPlayGames', () => {
     it('maps opening round games correctly', () => {
       const players = createMockPlayers();
@@ -216,6 +240,56 @@ describe('resultMapper', () => {
       expect(result2?.match_position).toBe(6); // 15v18 is position 6
       expect(result2?.winner_seed).toBe(18); // Upset winner
       expect(result2?.loser_seed).toBe(15);
+    });
+
+    it('falls back to index-based position when seeds are shifted (player removed)', () => {
+      // Simulate a bracket where seed 23 was removed, shifting pairings
+      // Seed 10 now plays seed 24 instead of seed 23
+      const players: MatchPlayPlayer[] = [
+        ...Array.from({ length: 22 }, (_, i) => ({
+          playerId: 1000 + i + 1, // 1001-1022 for seeds 1-22
+          name: `Player ${i + 1}`,
+          status: 'active' as const,
+          ifpaId: null,
+          claimedBy: null,
+          tournamentPlayer: { status: 'active' as const, seed: i, pointsAdjustment: 0 },
+        })),
+        // Skip seed 23, go straight to seed 24 and 25
+        {
+          playerId: 1024,
+          name: 'Player 24',
+          status: 'active' as const,
+          ifpaId: null,
+          claimedBy: null,
+          tournamentPlayer: { status: 'active' as const, seed: 23, pointsAdjustment: 0 }, // 0-indexed
+        },
+        {
+          playerId: 1025,
+          name: 'Player 25',
+          status: 'active' as const,
+          ifpaId: null,
+          claimedBy: null,
+          tournamentPlayer: { status: 'active' as const, seed: 24, pointsAdjustment: 0 }, // 0-indexed
+        },
+      ];
+
+      const games: MatchPlayGame[] = [
+        createMockGame({
+          gameId: 1001,
+          index: 26, // Position 1 in opening round (where 10v23 would normally be)
+          playerIds: [1010, 1024], // Seed 10 vs Seed 24 (shifted pairing)
+          resultPositions: [1010, 1024], // Seed 10 wins
+        }),
+      ];
+
+      const { results, skipped } = mapMatchPlayGames(games, players, 24);
+
+      expect(results).toHaveLength(1);
+      expect(skipped).toHaveLength(0);
+      expect(results[0].round).toBe(ROUNDS.OPENING);
+      expect(results[0].match_position).toBe(1); // Falls back to index-based: 26 -> 1
+      expect(results[0].winner_seed).toBe(10);
+      expect(results[0].loser_seed).toBe(24);
     });
 
     it('skips bye games', () => {

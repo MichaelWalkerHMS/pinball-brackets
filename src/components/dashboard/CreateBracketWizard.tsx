@@ -23,12 +23,10 @@ export default function CreateBracketWizard({ tournaments }: CreateBracketWizard
     return Array.from(stateSet).sort();
   }, [tournaments]);
 
-  // Filter tournaments by selected state, only show unlocked ones (no results yet)
+  // Filter tournaments by selected state (show all tournaments including completed)
   const filteredTournaments = useMemo(() => {
     if (!selectedState) return [];
-    return tournaments.filter(
-      (t) => t.state === selectedState && !t.has_results
-    );
+    return tournaments.filter((t) => t.state === selectedState);
   }, [tournaments, selectedState]);
 
   // Get selected tournament object
@@ -148,7 +146,7 @@ export default function CreateBracketWizard({ tournaments }: CreateBracketWizard
               {selectedState
                 ? filteredTournaments.length > 0
                   ? "Select tournament..."
-                  : "No open tournaments"
+                  : "No tournaments available"
                 : "Select a state first"}
             </option>
             {filteredTournaments.map((tournament) => (
@@ -159,42 +157,56 @@ export default function CreateBracketWizard({ tournaments }: CreateBracketWizard
           </select>
         </div>
 
-        {/* Arrow */}
-        <div className="hidden sm:flex items-center text-[rgb(var(--color-text-muted))] pb-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
+        {/* Only show bracket creation UI for tournaments without results */}
+        {selectedTournament && !selectedTournament.has_results && (
+          <>
+            {/* Arrow */}
+            <div className="hidden sm:flex items-center text-[rgb(var(--color-text-muted))] pb-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
 
-        {/* Step 3: Bracket name + Create button */}
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-[rgb(var(--color-text-secondary))] mb-1">
-            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs mr-1 ${selectedTournamentId ? "bg-[rgb(var(--color-accent-primary))] text-white" : "bg-[rgb(var(--color-border-secondary))] text-[rgb(var(--color-text-muted))]"}`}>3</span>
-            Bracket Name
-          </label>
-          <input
-            type="text"
-            value={bracketName}
-            onChange={(e) => setBracketName(e.target.value)}
-            placeholder="Enter bracket name"
-            maxLength={50}
-            disabled={!selectedTournamentId}
-            className="w-full px-3 py-2 border border-[rgb(var(--color-border-secondary))] rounded-lg bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))] focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:border-[rgb(var(--color-accent-primary))] disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-        </div>
+            {/* Step 3: Bracket name + Create button */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs font-medium text-[rgb(var(--color-text-secondary))] mb-1">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs mr-1 bg-[rgb(var(--color-accent-primary))] text-white">3</span>
+                Bracket Name
+              </label>
+              <input
+                type="text"
+                value={bracketName}
+                onChange={(e) => setBracketName(e.target.value)}
+                placeholder="Enter bracket name"
+                maxLength={50}
+                className="w-full px-3 py-2 border border-[rgb(var(--color-border-secondary))] rounded-lg bg-[rgb(var(--color-bg-primary))] text-[rgb(var(--color-text-primary))] focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:border-[rgb(var(--color-accent-primary))]"
+              />
+            </div>
 
-        {/* Create button */}
-        <button
-          onClick={handleCreate}
-          disabled={!canCreate}
-          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-            canCreate
-              ? "bg-[rgb(var(--color-accent-primary))] text-white hover:bg-[rgb(var(--color-accent-hover))]"
-              : "bg-[rgb(var(--color-border-secondary))] text-[rgb(var(--color-text-muted))] cursor-not-allowed"
-          }`}
-        >
-          {isCreating ? "Creating..." : "Create Bracket"}
-        </button>
+            {/* Create button */}
+            <button
+              onClick={handleCreate}
+              disabled={!canCreate}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                canCreate
+                  ? "bg-[rgb(var(--color-accent-primary))] text-white hover:bg-[rgb(var(--color-accent-hover))]"
+                  : "bg-[rgb(var(--color-border-secondary))] text-[rgb(var(--color-text-muted))] cursor-not-allowed"
+              }`}
+            >
+              {isCreating ? "Creating..." : "Create Bracket"}
+            </button>
+          </>
+        )}
+
+        {/* View Leaderboard button - always shown when tournament is selected */}
+        {selectedTournament && (
+          <button
+            onClick={() => router.push(`/tournament/${selectedTournamentId}`)}
+            className="px-6 py-2 rounded-lg font-medium transition-colors border border-[rgb(var(--color-accent-primary))] text-[rgb(var(--color-accent-primary))] hover:bg-[rgb(var(--color-accent-light))]"
+          >
+            View Leaderboard
+          </button>
+        )}
       </div>
 
       {/* Error message */}

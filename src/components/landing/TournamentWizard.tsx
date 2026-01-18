@@ -29,12 +29,10 @@ export default function TournamentWizard({ tournaments }: TournamentWizardProps)
     return Array.from(stateSet).sort();
   }, [tournaments]);
 
-  // Filter tournaments by selected state, only show unlocked ones (no results yet)
+  // Filter tournaments by selected state (show all tournaments including completed)
   const filteredTournaments = useMemo(() => {
     if (!selectedState) return [];
-    return tournaments.filter(
-      (t) => t.state === selectedState && !t.has_results
-    );
+    return tournaments.filter((t) => t.state === selectedState);
   }, [tournaments, selectedState]);
 
   // Get selected tournament object
@@ -124,7 +122,7 @@ export default function TournamentWizard({ tournaments }: TournamentWizardProps)
               {selectedState
                 ? filteredTournaments.length > 0
                   ? "Select tournament..."
-                  : "No open tournaments"
+                  : "No tournaments available"
                 : "Select a state/province first"}
             </option>
             {filteredTournaments.map((tournament) => (
@@ -148,12 +146,14 @@ export default function TournamentWizard({ tournaments }: TournamentWizardProps)
             >
               View Leaderboard
             </button>
-            <button
-              onClick={handleCreateBracket}
-              className="px-4 py-2 bg-[rgb(var(--color-accent-primary))] text-white rounded-lg hover:bg-[rgb(var(--color-accent-hover))] font-medium transition-colors"
-            >
-              Create Bracket
-            </button>
+            {!selectedTournament.has_results && (
+              <button
+                onClick={handleCreateBracket}
+                className="px-4 py-2 bg-[rgb(var(--color-accent-primary))] text-white rounded-lg hover:bg-[rgb(var(--color-accent-hover))] font-medium transition-colors"
+              >
+                Create Bracket
+              </button>
+            )}
           </div>
         </>
       )}

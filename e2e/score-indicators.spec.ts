@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, navigateToBracketEditor, verifyLoggedIn } from './fixtures/auth'
+import { login, navigateToBracketEditor, saveBracket, verifyLoggedIn } from './fixtures/auth'
 
 test.describe('Score Indicators', () => {
   test.beforeEach(async ({ page }) => {
@@ -36,8 +36,7 @@ test.describe('Score Indicators', () => {
     }
 
     // Save the bracket
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+    await saveBracket(page)
   })
 
   test('score badges appear when is_correct is set on picks', async ({ page }) => {
@@ -61,8 +60,7 @@ test.describe('Score Indicators', () => {
     }
 
     // Save the bracket
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+    await saveBracket(page)
 
     // Note: Score badges (with title="Correct prediction" or "Incorrect prediction")
     // will only appear after recalculateScores() has run on the server.
@@ -92,8 +90,7 @@ test.describe('Score Indicators', () => {
       await firstSlot.click()
     }
 
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+    await saveBracket(page)
 
     // Reload to get fresh data
     await page.reload()

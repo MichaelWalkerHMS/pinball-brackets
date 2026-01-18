@@ -74,11 +74,8 @@ test.describe('Bracket', () => {
       await firstSlot.click()
     }
 
-    // Save the bracket
-    await page.getByRole('button', { name: 'Save' }).click()
-
-    // Wait for save confirmation
-    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+    // Save the bracket using the reliable helper
+    await saveBracket(page)
   })
 
   test('picks persist after page reload', async ({ page }) => {
@@ -99,9 +96,8 @@ test.describe('Bracket', () => {
       const playerText = await firstSlot.textContent()
       await firstSlot.click()
 
-      // Save
-      await page.getByRole('button', { name: 'Save' }).click()
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+      // Save using reliable helper
+      await saveBracket(page)
 
       // Reload the page
       await page.reload()
@@ -183,8 +179,7 @@ test.describe('Bracket', () => {
     const bracketEditUrl = page.url()
 
     // Save the bracket first so it exists and has an ID
-    await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+    await saveBracket(page)
 
     // Delete button should be visible after save
     const deleteButton = page.getByRole('button', { name: 'Delete Bracket' })
@@ -228,8 +223,7 @@ test.describe('Bracket (logged out)', () => {
     // Save if needed (new brackets need to be saved)
     const saveButton = page.getByRole('button', { name: 'Save' })
     if (await saveButton.isEnabled()) {
-      await saveButton.click()
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+      await saveBracket(page)
     }
 
     // Ensure it's public (toggle if needed)
@@ -237,8 +231,7 @@ test.describe('Bracket (logged out)', () => {
     if (isPrivate) {
       const toggleButton = page.getByRole('button', { name: /make public/i })
       await toggleButton.click()
-      await page.getByRole('button', { name: 'Save' }).click()
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+      await saveBracket(page)
     }
 
     // Logout

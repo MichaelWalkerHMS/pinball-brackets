@@ -1,5 +1,5 @@
 import { test, expect, devices } from '@playwright/test'
-import { login, navigateToBracketEditor } from './fixtures/auth'
+import { login, navigateToBracketEditor, saveBracket } from './fixtures/auth'
 
 // Configure mobile viewport (use project's browser, not webkit)
 const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = devices['iPhone 13']
@@ -70,9 +70,8 @@ test.describe('Mobile', () => {
       await firstSlot.tap()
     }
 
-    // Save bracket via tap
-    await page.getByRole('button', { name: 'Save' }).tap()
-    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+    // Save bracket using helper (click works on mobile too)
+    await saveBracket(page)
   })
 
   test('login form works on mobile', async ({ page }) => {

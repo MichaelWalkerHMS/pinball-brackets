@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "seed": "tsx src/scripts/seed-dev-data.ts",
     "seed:prod": "tsx src/scripts/seed-dev-data.ts .env.prod",
     "import-states": "tsx src/scripts/import-state-tournaments.ts",

@@ -335,7 +335,6 @@ export default function PlayerManagement({
 
           <PlayerList
             players={players}
-            tournamentId={tournament.id}
             sensors={sensors}
             onDragEnd={handleDragEnd}
             onDelete={handleDelete}
@@ -487,7 +486,6 @@ function BulkImportPanel({
 
 function PlayerList({
   players,
-  tournamentId,
   sensors,
   onDragEnd,
   onDelete,
@@ -500,7 +498,6 @@ function PlayerList({
   onEditingNameChange,
 }: {
   players: Player[];
-  tournamentId: string;
   sensors: ReturnType<typeof useSensors>;
   onDragEnd: (event: DragEndEvent) => void;
   onDelete: (playerId: string, playerName: string) => void;

@@ -60,8 +60,6 @@ export default function BracketView({
   results = [],
   isLocked,
   isLoggedIn,
-  bracketName,
-  ownerName,
   affectedSeeds,
   seedingChangeCount,
 }: BracketViewProps) {

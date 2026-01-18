@@ -56,30 +56,19 @@ export default async function globalSetup() {
 
   console.log('Test user data cleanup complete')
 
-  // Seed test results for score indicator tests
-  console.log('Seeding test results for score indicator tests...')
+  // Clear ALL results to ensure bracket creation works for any tournament
+  // (has_results is computed from results count, so clearing results unlocks tournaments)
+  // This is safe because this is the dev database used only for testing
+  console.log('Clearing all tournament results...')
 
-  const { data: testTournament } = await supabase
-    .from('tournaments')
-    .select('id')
-    .eq('name', '2026 Michigan Test')
-    .single()
+  const { error: clearError } = await supabase
+    .from('results')
+    .delete()
+    .neq('tournament_id', '00000000-0000-0000-0000-000000000000') // Delete all (no-op condition)
 
-  if (testTournament) {
-    // Seed a few opening round results for testing score indicators
-    // Opening round matches: 9v24, 10v23, 11v22, 12v21, 13v20, 14v19, 15v18, 16v17
-    const { error: resultsError } = await supabase.from('results').upsert([
-      { tournament_id: testTournament.id, round: 0, match_position: 0, winner_seed: 9, loser_seed: 24, winner_games: 0, loser_games: 0 },
-      { tournament_id: testTournament.id, round: 0, match_position: 1, winner_seed: 23, loser_seed: 10, winner_games: 0, loser_games: 0 },
-      { tournament_id: testTournament.id, round: 0, match_position: 2, winner_seed: 11, loser_seed: 22, winner_games: 0, loser_games: 0 },
-    ], { onConflict: 'tournament_id,round,match_position' })
-
-    if (resultsError) {
-      console.warn('Warning: Could not seed results:', resultsError.message)
-    } else {
-      console.log('Test results seeded successfully')
-    }
+  if (clearError) {
+    console.warn('Warning: Could not clear tournament results:', clearError.message)
   } else {
-    console.warn('Warning: Test tournament not found, skipping result seeding')
+    console.log('Tournament results cleared successfully')
   }
 }

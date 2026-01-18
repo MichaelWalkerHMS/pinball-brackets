@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, logout, navigateToBracketEditor, verifyLoggedIn } from './fixtures/auth'
+import { login, logout, navigateToBracketEditor, saveBracket, verifyLoggedIn } from './fixtures/auth'
 
 test.describe('Bracket', () => {
   test.beforeEach(async ({ page }) => {
@@ -16,38 +16,38 @@ test.describe('Bracket', () => {
     // Re-verify we're logged in and on dashboard (redundant but helps debug flakiness)
     await expect(page.getByRole('heading', { name: 'My Brackets' })).toBeVisible()
 
-    // Check if we already have a bracket with leaderboard link
-    const leaderboardLink = page.getByRole('link', { name: 'Leaderboard' }).first()
-    const hasLeaderboardLink = await leaderboardLink.isVisible().catch(() => false)
+    // First, ensure we have a bracket by creating one via the wizard
+    // Select state
+    const stateDropdown = page.locator('select').first()
+    await stateDropdown.selectOption({ label: 'Michigan' })
 
-    if (!hasLeaderboardLink) {
-      // Create a bracket first via the dashboard wizard
-      await expect(page.getByRole('heading', { name: 'Create New Bracket' })).toBeVisible()
+    // Select first tournament
+    const tournamentDropdown = page.locator('select').nth(1)
+    await tournamentDropdown.selectOption({ index: 1 })
 
-      const stateDropdown = page.locator('select').first()
-      await stateDropdown.selectOption({ label: 'Michigan' })
+    // Wait for name to auto-populate
+    const bracketNameInput = page.getByPlaceholder('Enter bracket name')
+    await expect(bracketNameInput).toHaveValue(/.+/, { timeout: 5000 })
 
-      const tournamentDropdown = page.locator('select').nth(1)
-      await tournamentDropdown.selectOption({ index: 1 })
+    // Create the bracket
+    await page.getByRole('button', { name: 'Create Bracket' }).click()
+    await expect(page).toHaveURL(/\/bracket\/.*\/edit/, { timeout: 15000 })
 
-      // Wait for bracket name to be auto-populated or fill manually
-      const bracketNameInput = page.getByPlaceholder('Enter bracket name')
-      try {
-        await expect(bracketNameInput).toHaveValue(/Michigan.*#\d+/, { timeout: 5000 })
-      } catch {
-        // If auto-generation fails, fill in a name manually
-        await bracketNameInput.fill('Test Bracket')
-      }
-
-      await page.getByRole('button', { name: 'Create Bracket' }).click()
-      await expect(page).toHaveURL(/\/bracket\/.*\/edit/, { timeout: 10000 })
-
-      // Navigate back to dashboard
-      await page.goto('/')
-      await page.waitForLoadState('networkidle')
+    // Make a pick so we have something to save
+    const playerSlot = page.locator('[class*="cursor-pointer"]').filter({ hasText: /^\d+/ }).first()
+    if (await playerSlot.isVisible()) {
+      await playerSlot.click()
     }
 
-    // Now click the leaderboard link
+    // Save the bracket
+    await saveBracket(page)
+
+    // Now navigate to tournament page using the View Leaderboard button
+    // First go back to dashboard
+    await page.getByRole('link', { name: /back to dashboard/i }).click()
+    await expect(page.getByRole('heading', { name: 'My Brackets' })).toBeVisible({ timeout: 15000 })
+
+    // Click the leaderboard link
     await page.getByRole('link', { name: 'Leaderboard' }).first().click()
     await expect(page).toHaveURL(/\/tournament\//, { timeout: 10000 })
 
@@ -56,25 +56,8 @@ test.describe('Bracket', () => {
   })
 
   test('can make picks and save bracket', async ({ page }) => {
-    // Create or navigate to bracket edit page via dashboard
-    const editLink = page.getByRole('link', { name: 'Edit' }).first()
-    const hasEditLink = await editLink.isVisible().catch(() => false)
-
-    if (hasEditLink) {
-      await editLink.click()
-    } else {
-      // Create a new bracket via wizard
-      const stateDropdown = page.locator('select').first()
-      await stateDropdown.selectOption({ label: 'Michigan' })
-
-      const tournamentDropdown = page.locator('select').nth(1)
-      await tournamentDropdown.selectOption({ index: 1 })
-
-      await page.getByRole('button', { name: 'Create Bracket' }).click()
-    }
-
-    // Wait for bracket to load
-    await expect(page).toHaveURL(/\/bracket\/.*\/edit/, { timeout: 10000 })
+    // Navigate to bracket editor via helper (handles existing brackets or creates new)
+    await navigateToBracketEditor(page)
     // Check for either Opening Round (24-player) or Round of 16 (both formats)
     // Use .first() because 24-player brackets have both headings visible
     const openingRound = page.getByRole('heading', { name: 'Opening Round' })
@@ -99,25 +82,8 @@ test.describe('Bracket', () => {
   })
 
   test('picks persist after page reload', async ({ page }) => {
-    // Navigate to bracket edit page via dashboard
-    const editLink = page.getByRole('link', { name: 'Edit' }).first()
-    const hasEditLink = await editLink.isVisible().catch(() => false)
-
-    if (hasEditLink) {
-      await editLink.click()
-    } else {
-      // Create a new bracket via wizard
-      const stateDropdown = page.locator('select').first()
-      await stateDropdown.selectOption({ label: 'Michigan' })
-
-      const tournamentDropdown = page.locator('select').nth(1)
-      await tournamentDropdown.selectOption({ index: 1 })
-
-      await page.getByRole('button', { name: 'Create Bracket' }).click()
-    }
-
-    // Wait for bracket to load
-    await expect(page).toHaveURL(/\/bracket\/.*\/edit/, { timeout: 10000 })
+    // Navigate to bracket editor via helper (handles existing brackets or creates new)
+    await navigateToBracketEditor(page)
     // Check for either Opening Round (24-player) or Round of 16 (both formats)
     // Use .first() because 24-player brackets have both headings visible
     const openingRound = page.getByRole('heading', { name: 'Opening Round' })
@@ -201,7 +167,7 @@ test.describe('Bracket', () => {
     await expect(page.getByRole('heading', { name: 'My Brackets' })).toBeVisible()
 
     // Create a new bracket specifically for deletion test
-    // This avoids issues with shared brackets from other tests
+    // (global setup clears all results, so any tournament works)
     const stateDropdown = page.locator('select').first()
     await stateDropdown.selectOption({ label: 'Michigan' })
 

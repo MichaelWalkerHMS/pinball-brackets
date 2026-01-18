@@ -15,6 +15,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   const [loading, setLoading] = useState(false);
 
   // Reset state when modal opens
+  /* eslint-disable react-hooks/set-state-in-effect -- Intentional: reset modal state when opened */
   useEffect(() => {
     if (isOpen) {
       setActiveTab(defaultTab);
@@ -22,6 +23,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       setLoading(false);
     }
   }, [isOpen, defaultTab]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Handle escape key
   const handleEscape = useCallback(

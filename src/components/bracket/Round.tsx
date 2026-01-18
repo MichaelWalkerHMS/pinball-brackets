@@ -3,7 +3,6 @@
 import type { PlayerMap } from "@/lib/types";
 import type { ActualParticipants } from "@/lib/bracket/actualParticipants";
 import Match from "./Match";
-import { ROUNDS } from "@/lib/bracket/constants";
 import { ROUND_PADDING, ROUND_GAP, MATCH_GAP } from "@/lib/bracket/layout";
 
 interface MatchData {

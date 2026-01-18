@@ -134,15 +134,25 @@ test.describe('Dashboard', () => {
     await login(page)
     await verifyLoggedIn(page)
 
-    // Should see the wizard steps
+    // Should see the initial wizard steps (steps 1 and 2)
     await expect(page.getByText('Select State')).toBeVisible()
     await expect(page.getByText('Select Tournament')).toBeVisible()
+
+    // Step 3 (Bracket Name) only appears after selecting a tournament without results
+    // Select a state and tournament to see the full wizard
+    const stateDropdown = page.locator('select').first()
+    await stateDropdown.selectOption({ label: 'Michigan' })
+
+    const tournamentDropdown = page.locator('select').nth(1)
+    await tournamentDropdown.selectOption({ index: 1 })
+
+    // Now step 3 should be visible
     await expect(page.getByText('Bracket Name')).toBeVisible()
 
-    // Create button should be disabled initially
+    // Create button should be enabled after tournament selection (name auto-populates)
     const createButton = page.getByRole('button', { name: 'Create Bracket' })
     await expect(createButton).toBeVisible()
-    await expect(createButton).toBeDisabled()
+    await expect(createButton).toBeEnabled()
   })
 
   test('can select state and tournament in wizard', async ({ page }) => {

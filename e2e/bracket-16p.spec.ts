@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { login, logout, navigateToBracketEditor, verifyLoggedIn } from './fixtures/auth'
+import { login, verifyLoggedIn } from './fixtures/auth'
 
 /**
  * E2E tests for 16-player tournament brackets.
@@ -18,9 +18,6 @@ import { login, logout, navigateToBracketEditor, verifyLoggedIn } from './fixtur
  *
  * The tests will skip if no 16-player tournament is found.
  */
-
-// Tournament name to look for (update this if using a different test tournament)
-const TOURNAMENT_16P_NAME = '16-Player Test'
 
 test.describe('16-Player Bracket', () => {
   test.beforeEach(async ({ page }) => {
@@ -147,7 +144,7 @@ test.describe('16-Player Bracket', () => {
 test.describe('16-Player Tournament Form', () => {
   // These tests verify the admin form shows correct max points for 16-player
 
-  test('tournament form shows max 29 points for 16-player selection', async ({ page }) => {
+  test('tournament form shows max 29 points for 16-player selection', async () => {
     // This would require admin access - skip for non-admin e2e user
     test.skip(true, 'Requires admin access - test manually via admin interface')
   })

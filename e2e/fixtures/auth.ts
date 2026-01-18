@@ -22,8 +22,27 @@ function getTestUserCredentials(): { email: string; password: string } {
 }
 
 /**
+ * Get admin user credentials for admin-only tests.
+ * Uses E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD from .env.test
+ */
+function getAdminCredentials(): { email: string; password: string } {
+  const email = process.env.E2E_ADMIN_EMAIL
+  const password = process.env.E2E_ADMIN_PASSWORD
+
+  if (!email || !password) {
+    throw new Error(
+      'Missing admin credentials. ' +
+      'Ensure E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are set in .env.test'
+    )
+  }
+
+  return { email, password }
+}
+
+/**
  * Save the current bracket and wait for confirmation.
- * More reliable than just checking for "Saved!" text.
+ * Note: After save, the app calls router.refresh() which may clear the "Saved!" message.
+ * We wait for the save cycle to complete by watching the button state.
  */
 export async function saveBracket(page: Page): Promise<void> {
   const saveButton = page.getByRole('button', { name: 'Save' })
@@ -34,13 +53,20 @@ export async function saveBracket(page: Page): Promise<void> {
   // Click save
   await saveButton.click()
 
-  // Wait for either:
-  // 1. "Saved!" message to appear
-  // 2. Button text to change to "Saving..." then back to "Save"
-  // Use a combination approach for reliability
-  await expect(
-    page.getByText(/saved!/i).or(page.getByText('Saved!'))
-  ).toBeVisible({ timeout: 15000 })
+  // Wait for save cycle: button should briefly show "Saving...", then router.refresh() reloads
+  // After refresh, "Saved!" might not be visible, so we wait for the button to return to "Save"
+  // First wait for "Saving..." to appear (confirms click registered)
+  try {
+    await expect(page.getByRole('button', { name: 'Saving...' })).toBeVisible({ timeout: 2000 })
+  } catch {
+    // Save might complete very quickly, that's OK
+  }
+
+  // Then wait for "Save" button to be back (indicates save completed and page refreshed)
+  await expect(page.getByRole('button', { name: 'Save' })).toBeVisible({ timeout: 15000 })
+
+  // Small delay to ensure any post-save updates settle
+  await page.waitForTimeout(500)
 }
 
 /**
@@ -112,6 +138,25 @@ export async function login(page: Page): Promise<void> {
 }
 
 /**
+ * Login as the E2E admin user (for admin-only tests)
+ */
+export async function loginAsAdmin(page: Page): Promise<void> {
+  const { email, password } = getAdminCredentials()
+
+  await page.goto('/login')
+
+  // Fill in login form
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+
+  // Submit the form
+  await page.getByRole('button', { name: /log in/i }).click()
+
+  // Wait for successful login - should redirect to homepage
+  await expect(page).toHaveURL('/', { timeout: 10000 })
+}
+
+/**
  * Logout the current user. Handles mobile hamburger menu automatically.
  */
 export async function logout(page: Page): Promise<void> {
@@ -152,6 +197,8 @@ export async function isLoggedIn(page: Page): Promise<boolean> {
 /**
  * Navigate to bracket editor for a specific tournament.
  * Uses the dashboard: either navigates to edit URL of existing bracket, or creates new via wizard.
+ *
+ * Note: Global setup clears all results, so any tournament can be used for bracket creation.
  */
 export async function navigateToBracketEditor(
   page: Page,

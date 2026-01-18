@@ -15,6 +15,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [success, setSuccess] = useState(false);
 
   // Reset state when modal opens
+  /* eslint-disable react-hooks/set-state-in-effect -- Intentional: reset form state when modal opens */
   useEffect(() => {
     if (isOpen) {
       setMessage("");
@@ -23,6 +24,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       setSuccess(false);
     }
   }, [isOpen]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Handle escape key
   const handleEscape = useCallback(

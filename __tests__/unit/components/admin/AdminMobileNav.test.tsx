@@ -90,7 +90,7 @@ describe('AdminMobileNav', () => {
 
   it('closes menu when clicking outside', async () => {
     const user = userEvent.setup()
-    const { container } = render(
+    render(
       <div>
         <div data-testid="outside">Outside content</div>
         <AdminMobileNav />

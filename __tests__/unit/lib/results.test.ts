@@ -12,9 +12,7 @@ import {
 } from '../../fixtures/results';
 import {
   ROUNDS,
-  MATCHES_PER_ROUND,
   OPENING_ROUND_MATCHES,
-  ROUND_OF_16_MATCHES,
   getPickKey,
 } from '@/lib/bracket/constants';
 
@@ -65,7 +63,7 @@ describe('Results Fixtures', () => {
       const results = createOpeningRoundResults(TEST_TOURNAMENT_ID);
 
       // Match the expected opening round pairings
-      OPENING_ROUND_MATCHES.forEach((match, index) => {
+      OPENING_ROUND_MATCHES.forEach((match) => {
         const result = results.find((r) => r.match_position === match.position);
         expect(result).toBeDefined();
         // Higher seed (lower number) should win

@@ -48,6 +48,10 @@ export async function loadUserBracket(
  * Save or update a bracket with picks
  * If bracketId is provided, updates that specific bracket
  * Otherwise creates a new bracket
+ *
+ * When tournament is locked (has results):
+ * - Metadata (name, is_public) can still be updated
+ * - Picks and final game scores cannot be modified
  */
 export async function saveBracket(
   data: SaveBracketInput
@@ -68,10 +72,35 @@ export async function saveBracket(
     .select("*", { count: "exact", head: true })
     .eq("tournament_id", data.tournamentId);
 
-  if ((resultCount ?? 0) > 0) {
-    return { bracket: null, error: "Predictions are locked" };
+  const isLocked = (resultCount ?? 0) > 0;
+
+  // If locked and trying to create a new bracket, reject
+  if (isLocked && !data.bracketId) {
+    return { bracket: null, error: "Cannot create new brackets - predictions are locked" };
   }
 
+  // If locked, only allow metadata updates (name, is_public)
+  if (isLocked && data.bracketId) {
+    const { data: updatedBracket, error: updateError } = await supabase
+      .from("brackets")
+      .update({
+        name: data.bracketName || null,
+        is_public: data.isPublic,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.bracketId)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return { bracket: null, error: updateError.message };
+    }
+
+    return { bracket: updatedBracket as Bracket, error: null };
+  }
+
+  // Not locked - full update including picks and final scores
   let bracketId: string;
 
   if (data.bracketId) {

@@ -318,7 +318,6 @@ export default function BracketView({
               }}
               placeholder="Bracket name (optional)"
               maxLength={50}
-              disabled={isLocked}
               className="w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm px-3 py-2 border border-[rgb(var(--color-border-secondary))] rounded-md focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:border-[rgb(var(--color-accent-primary))] text-sm bg-[rgb(var(--color-bg-primary))]"
             />
 
@@ -332,7 +331,6 @@ export default function BracketView({
                 <button
                   type="button"
                   onClick={() => {
-                    if (isLocked) return;
                     const newValue = !isPublic;
                     setIsPublic(newValue);
                     setIsDirty(true);
@@ -341,12 +339,11 @@ export default function BracketView({
                       setShowPrivateExplainer(true);
                     }
                   }}
-                  disabled={isLocked}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                  className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
                     isPublic
                       ? "bg-[rgb(var(--color-accent-primary))]"
                       : "bg-[rgb(var(--color-border-secondary))]"
-                  } ${isLocked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  }`}
                   aria-label={isPublic ? "Make private" : "Make public"}
                 >
                   <div
@@ -423,11 +420,9 @@ export default function BracketView({
                     }
                   }
                 }}
-                disabled={isLocked || isSaving}
+                disabled={isSaving}
                 className={`px-4 py-2 rounded-lg font-medium text-sm ${
-                  isLocked
-                    ? "bg-[rgb(var(--color-border-secondary))] text-[rgb(var(--color-text-muted))] cursor-not-allowed"
-                    : isDirty
+                  isDirty
                     ? "bg-[rgb(var(--color-accent-primary))] text-white hover:bg-[rgb(var(--color-accent-hover))]"
                     : "bg-[rgb(var(--color-bg-tertiary))] text-[rgb(var(--color-text-primary))] hover:bg-[rgb(var(--color-border-secondary))]"
                 }`}

@@ -46,7 +46,7 @@ export function buildSeedMap(players: MatchPlayPlayer[]): SeedMap {
 
   for (const player of players) {
     const mpSeed = player.tournamentPlayer?.seed;
-    if (mpSeed !== null && mpSeed !== undefined) {
+    if (mpSeed != null) {
       // Convert 0-indexed to 1-indexed
       seedMap.set(player.playerId, mpSeed + 1);
     }

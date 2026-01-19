@@ -79,7 +79,7 @@ export default function Match({
 
   // Determine result bar content
   let resultBarText: string | null = null;
-  let resultBarColor: "green" | "red" | "orange" | null = null;
+  let resultBarColor: "green" | "red" | null = null;
   let winnerWasUnexpected = false; // True if actual winner wasn't expected to be in this match
 
   if (hasResult && pickedWinner !== null) {
@@ -156,9 +156,7 @@ export default function Match({
         resultBarText
           ? resultBarColor === "green"
             ? "bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
-            : resultBarColor === "red"
-            ? "bg-[rgb(var(--color-error-bg))] text-[rgb(var(--color-error-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
-            : "bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
+            : "bg-[rgb(var(--color-error-bg))] text-[rgb(var(--color-error-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
           : "invisible"
       }`}>
         {resultBarText || "\u00A0"} {/* Non-breaking space when empty to maintain height */}

@@ -497,7 +497,7 @@ export default function BracketView({
           <button
             type="button"
             onClick={() => setViewMode(v => v === 'results' ? 'predictions' : 'results')}
-            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
+            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:ring-offset-2 ${
               viewMode === 'results'
                 ? "bg-[rgb(var(--color-accent-primary))]"
                 : "bg-[rgb(var(--color-border-secondary))]"

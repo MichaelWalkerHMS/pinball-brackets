@@ -1,3 +1,11 @@
+// Valid tournament player counts
+export const VALID_PLAYER_COUNTS = [16, 24] as const;
+export type ValidPlayerCount = (typeof VALID_PLAYER_COUNTS)[number];
+
+export function isValidPlayerCount(count: number): count is ValidPlayerCount {
+  return VALID_PLAYER_COUNTS.includes(count as ValidPlayerCount);
+}
+
 // Round identifiers
 export const ROUNDS = {
   OPENING: 0,

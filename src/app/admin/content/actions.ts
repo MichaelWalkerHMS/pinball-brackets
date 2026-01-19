@@ -3,6 +3,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { FAQItem } from "@/lib/types";
+import { logger, LogContext } from "@/lib/logger";
+
+// Content length limits (in characters)
+const MAX_PAGE_CONTENT_LENGTH = 100_000; // ~100KB for page content
+const MAX_FAQ_QUESTION_LENGTH = 500;
+const MAX_FAQ_ANSWER_LENGTH = 10_000; // ~10KB for FAQ answers
 
 /**
  * Verify the current user is an admin.
@@ -40,6 +46,13 @@ export async function updatePageContent(
   title: string,
   content: string
 ): Promise<{ success?: boolean; error?: string }> {
+  // Validate content length
+  if (content.length > MAX_PAGE_CONTENT_LENGTH) {
+    return {
+      error: `Content exceeds maximum length of ${MAX_PAGE_CONTENT_LENGTH.toLocaleString()} characters`,
+    };
+  }
+
   const auth = await requireAdmin();
   if ("error" in auth) {
     return { error: auth.error };
@@ -58,7 +71,10 @@ export async function updatePageContent(
     .eq("page_slug", slug);
 
   if (error) {
-    console.error("Error updating page content:", error);
+    logger.error(LogContext.CMS, "Failed to update page content", {
+      slug,
+      error: error.message,
+    });
     return { error: error.message };
   }
 
@@ -76,6 +92,18 @@ export async function addFAQItem(
   question: string,
   answer: string
 ): Promise<{ item?: FAQItem; error?: string }> {
+  // Validate content length
+  if (question.length > MAX_FAQ_QUESTION_LENGTH) {
+    return {
+      error: `Question exceeds maximum length of ${MAX_FAQ_QUESTION_LENGTH} characters`,
+    };
+  }
+  if (answer.length > MAX_FAQ_ANSWER_LENGTH) {
+    return {
+      error: `Answer exceeds maximum length of ${MAX_FAQ_ANSWER_LENGTH.toLocaleString()} characters`,
+    };
+  }
+
   const auth = await requireAdmin();
   if ("error" in auth) {
     return { error: auth.error };
@@ -104,7 +132,9 @@ export async function addFAQItem(
     .single();
 
   if (error) {
-    console.error("Error adding FAQ item:", error);
+    logger.error(LogContext.CMS, "Failed to add FAQ item", {
+      error: error.message,
+    });
     return { error: error.message };
   }
 
@@ -122,6 +152,18 @@ export async function updateFAQItem(
   question: string,
   answer: string
 ): Promise<{ success?: boolean; error?: string }> {
+  // Validate content length
+  if (question.length > MAX_FAQ_QUESTION_LENGTH) {
+    return {
+      error: `Question exceeds maximum length of ${MAX_FAQ_QUESTION_LENGTH} characters`,
+    };
+  }
+  if (answer.length > MAX_FAQ_ANSWER_LENGTH) {
+    return {
+      error: `Answer exceeds maximum length of ${MAX_FAQ_ANSWER_LENGTH.toLocaleString()} characters`,
+    };
+  }
+
   const auth = await requireAdmin();
   if ("error" in auth) {
     return { error: auth.error };
@@ -139,7 +181,10 @@ export async function updateFAQItem(
     .eq("id", id);
 
   if (error) {
-    console.error("Error updating FAQ item:", error);
+    logger.error(LogContext.CMS, "Failed to update FAQ item", {
+      id,
+      error: error.message,
+    });
     return { error: error.message };
   }
 
@@ -165,7 +210,10 @@ export async function deleteFAQItem(
   const { error } = await supabase.from("faq_items").delete().eq("id", id);
 
   if (error) {
-    console.error("Error deleting FAQ item:", error);
+    logger.error(LogContext.CMS, "Failed to delete FAQ item", {
+      id,
+      error: error.message,
+    });
     return { error: error.message };
   }
 
@@ -200,7 +248,9 @@ export async function reorderFAQItems(
   const failed = results.find((r) => r.error);
 
   if (failed?.error) {
-    console.error("Error reordering FAQ items:", failed.error);
+    logger.error(LogContext.CMS, "Failed to reorder FAQ items", {
+      error: failed.error.message,
+    });
     return { error: failed.error.message };
   }
 

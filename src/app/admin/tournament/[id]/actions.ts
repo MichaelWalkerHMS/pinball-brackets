@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { recalculateScores } from "@/lib/scoring";
+import { logger, LogContext } from "@/lib/logger";
 
 /**
  * Verify the current user is an admin.
@@ -92,7 +93,7 @@ export async function bulkImportPlayers(
     .eq("tournament_id", tournamentId);
 
   if (deleteError) {
-    console.error("Error deleting existing players:", deleteError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to delete existing players", { error: deleteError.message });
     return { error: "Failed to clear existing players" };
   }
 
@@ -108,7 +109,7 @@ export async function bulkImportPlayers(
     .insert(playersToInsert);
 
   if (insertError) {
-    console.error("Error inserting players:", insertError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to insert players", { error: insertError.message });
     return { error: "Failed to insert players" };
   }
 
@@ -178,7 +179,7 @@ export async function updatePlayerName(playerId: string, name: string) {
     .eq("id", playerId);
 
   if (updateError) {
-    console.error("Error updating player name:", updateError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to update player name", { error: updateError.message });
     return { error: "Failed to update player name" };
   }
 
@@ -235,7 +236,7 @@ export async function deletePlayer(playerId: string) {
     .eq("id", playerId);
 
   if (deleteError) {
-    console.error("Error deleting player:", deleteError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to delete player", { error: deleteError.message });
     return { error: "Failed to delete player" };
   }
 
@@ -329,7 +330,7 @@ export async function addPlayer(
   });
 
   if (insertError) {
-    console.error("Error inserting player:", insertError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to insert player", { error: insertError.message });
     return { error: "Failed to add player" };
   }
 
@@ -401,7 +402,7 @@ export async function reorderPlayers(
     .eq("tournament_id", tournamentId);
 
   if (deleteError) {
-    console.error("Error deleting players for reorder:", deleteError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to delete players for reorder", { error: deleteError.message });
     return { error: "Failed to reorder players" };
   }
 
@@ -421,7 +422,7 @@ export async function reorderPlayers(
     .insert(playersToInsert);
 
   if (insertError) {
-    console.error("Error inserting reordered players:", insertError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to insert reordered players", { error: insertError.message });
     return { error: "Failed to save new player order" };
   }
 
@@ -482,7 +483,7 @@ export async function saveResult(
   );
 
   if (error) {
-    console.error("Error saving result:", error);
+    logger.error(LogContext.TOURNAMENT_RESULTS, "Failed to save result", { error: error.message });
     return { error: "Failed to save result" };
   }
 
@@ -516,7 +517,7 @@ export async function deleteResult(
     .eq("match_position", matchPosition);
 
   if (error) {
-    console.error("Error deleting result:", error);
+    logger.error(LogContext.TOURNAMENT_RESULTS, "Failed to delete result", { error: error.message });
     return { error: "Failed to delete result" };
   }
 
@@ -550,7 +551,7 @@ export async function clearAllResults(tournamentId: string) {
     .eq("tournament_id", tournamentId);
 
   if (error) {
-    console.error("Error clearing all results:", error);
+    logger.error(LogContext.TOURNAMENT_RESULTS, "Failed to clear all results", { error: error.message });
     return { error: "Failed to clear results" };
   }
 
@@ -583,7 +584,7 @@ export async function clearDownstreamResults(
     .gt("round", fromRound);
 
   if (error) {
-    console.error("Error clearing downstream results:", error);
+    logger.error(LogContext.TOURNAMENT_RESULTS, "Failed to clear downstream results", { error: error.message });
     return { error: "Failed to clear downstream results" };
   }
 
@@ -674,7 +675,7 @@ export async function importMatchPlayPlayers(
     // This ensures we only import data that actually exists in Match Play
     players = validatedPlayers;
   } catch (err) {
-    console.error("Error validating against Match Play:", err);
+    logger.error(LogContext.MATCH_PLAY, "Failed to validate against Match Play", { error: err instanceof Error ? err.message : String(err) });
     return { error: "Failed to validate players against Match Play. Please try again." };
   }
 
@@ -705,7 +706,7 @@ export async function importMatchPlayPlayers(
     .eq("tournament_id", tournamentId);
 
   if (deleteError) {
-    console.error("Error deleting existing players:", deleteError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to delete existing players", { error: deleteError.message });
     return { error: "Failed to clear existing players" };
   }
 
@@ -723,7 +724,7 @@ export async function importMatchPlayPlayers(
     .insert(playersToInsert);
 
   if (insertError) {
-    console.error("Error inserting players:", insertError);
+    logger.error(LogContext.TOURNAMENT_PLAYERS, "Failed to insert players", { error: insertError.message });
     return { error: "Failed to insert players" };
   }
 

@@ -34,7 +34,11 @@ export default function MatchPlayIndicator({ isLinked, matchPlayId }: MatchPlayI
         {isLinked ? "Match Play Synced" : "Match Play Not Synced"}
       </span>
       {/* Tooltip */}
-      <div className="absolute left-0 top-full mt-1.5 hidden group-hover:block z-10 px-2 py-1 text-xs bg-[rgb(var(--color-bg-primary))] border border-[rgb(var(--color-border-primary))] rounded shadow-lg max-w-[200px] whitespace-normal">
+      <div
+        id="matchplay-tooltip"
+        role="tooltip"
+        className="absolute left-0 top-full mt-1.5 hidden group-hover:block group-focus:block z-10 px-2 py-1 text-xs bg-[rgb(var(--color-bg-primary))] border border-[rgb(var(--color-border-primary))] rounded shadow-lg max-w-[200px] whitespace-normal"
+      >
         {tooltipText}
       </div>
     </>
@@ -46,7 +50,8 @@ export default function MatchPlayIndicator({ isLinked, matchPlayId }: MatchPlayI
         href={matchPlayUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative group flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+        className="relative group flex items-center gap-1.5 hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-accent-primary))] focus:ring-offset-2 rounded"
+        aria-describedby="matchplay-tooltip"
       >
         {content}
       </a>
@@ -54,7 +59,12 @@ export default function MatchPlayIndicator({ isLinked, matchPlayId }: MatchPlayI
   }
 
   return (
-    <div className="relative group flex items-center gap-1.5">
+    <div
+      className="relative group flex items-center gap-1.5 focus:outline-none"
+      tabIndex={0}
+      role="status"
+      aria-describedby="matchplay-tooltip"
+    >
       {content}
     </div>
   );

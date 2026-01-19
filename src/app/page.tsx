@@ -49,10 +49,7 @@ export default async function Home() {
           {/* Championship Banner */}
           <div className="mb-6 p-4 bg-[rgb(var(--color-warning-bg-light))] border border-[rgb(var(--color-warning-border))] rounded-lg">
             <p className="font-medium text-[rgb(var(--color-warning-text))]">
-              Congratulations to everyone who competed in yesterday&apos;s Open championships and those in today&apos;s Women&apos;s championships. Good luck!
-            </p>
-            <p className="mt-2 text-sm text-[rgb(var(--color-warning-text))]">
-              Last-minute changes to participants will impact the seeding and your brackets - there is no perfect way to auto-adjust them, so please review them prior to the tournament start if you want to make any changes.
+              Congratulations to everyone who competed in this year&apos;s Open and Women&apos;s championships!
             </p>
           </div>
 

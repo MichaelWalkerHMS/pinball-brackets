@@ -2,22 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { PlayerDiff, MappedPlayer } from "@/lib/matchplay";
+import type { MappedPlayer, TournamentPreview, PlayerDiff } from "@/lib/matchplay";
 import BulkSyncFilters, { type SyncFilters } from "./BulkSyncFilters";
-
-interface TournamentPreview {
-  tournament: {
-    id: string;
-    name: string;
-    matchplay_id: string;
-  };
-  players: MappedPlayer[];
-  diff: PlayerDiff | null;
-  hasChanges: boolean;
-  bracketCount: number;
-  existingCount: number;
-  error?: string;
-}
 
 type Phase = "idle" | "selecting" | "fetching" | "reviewing" | "confirming" | "applying" | "complete";
 

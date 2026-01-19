@@ -7,22 +7,8 @@ import {
   hasDiffChanges,
   MatchPlayError,
 } from "@/lib/matchplay";
-import type { PlayerDiff, MappedPlayer } from "@/lib/matchplay";
+import type { TournamentPreview, PlayerDiff } from "@/lib/matchplay";
 import type { TournamentStatus, TournamentType } from "@/lib/types";
-
-interface TournamentPreview {
-  tournament: {
-    id: string;
-    name: string;
-    matchplay_id: string;
-  };
-  players: MappedPlayer[];
-  diff: PlayerDiff | null;
-  hasChanges: boolean;
-  bracketCount: number;
-  existingCount: number;
-  error?: string;
-}
 
 interface PreviewResponse {
   success: boolean;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Tournament, Player, Result } from "@/lib/types";
 import {
@@ -37,6 +37,11 @@ export default function ResultsEntry({
 }: ResultsEntryProps) {
   const router = useRouter();
   const [results, setResults] = useState(initialResults);
+
+  // Sync local state when props change (e.g., after router.refresh())
+  useEffect(() => {
+    setResults(initialResults);
+  }, [initialResults]);
   // Default to first available round (OPENING for 24-player, R16 for 16-player)
   const [activeRound, setActiveRound] = useState<number>(
     tournament.player_count === 16 ? ROUNDS.ROUND_OF_16 : ROUNDS.OPENING
@@ -74,8 +79,8 @@ export default function ResultsEntry({
           skipped: data.skipped,
           byRound: data.byRound,
         });
-        // Full page reload to show updated results
-        window.location.reload();
+        // Refresh server data - useEffect will sync local state
+        router.refresh();
       }
     } catch {
       setError('Failed to connect to server');
@@ -384,10 +389,19 @@ export default function ResultsEntry({
                 Sync results from Match Play Events
               </p>
               {syncResult && (
-                <p className="text-sm text-[rgb(var(--color-success-text))] mt-1">
-                  Imported {syncResult.imported} result{syncResult.imported !== 1 ? 's' : ''}
-                  {syncResult.skipped > 0 && ` (${syncResult.skipped} skipped)`}
-                </p>
+                <div className="text-sm text-[rgb(var(--color-success-text))] mt-1">
+                  <p>
+                    Imported {syncResult.imported} result{syncResult.imported !== 1 ? 's' : ''}
+                    {syncResult.skipped > 0 && ` (${syncResult.skipped} skipped)`}
+                  </p>
+                  {Object.keys(syncResult.byRound).length > 0 && (
+                    <p className="text-xs opacity-75 mt-0.5">
+                      {Object.entries(syncResult.byRound).map(([round, count]) =>
+                        `${round}: ${count}`
+                      ).join(' · ')}
+                    </p>
+                  )}
+                </div>
               )}
             </>
           ) : (

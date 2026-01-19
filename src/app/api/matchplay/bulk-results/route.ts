@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createMatchPlayClient, safeMatchPlayCall, mapMatchPlayGames } from '@/lib/matchplay';
 import { recalculateScores } from '@/lib/scoring';
+import { isValidPlayerCount } from '@/lib/bracket/constants';
 import type { TournamentStatus, TournamentType } from '@/lib/types';
 
 // Rate limiting: delay between Match Play API calls to avoid overwhelming their servers
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSyncR
     };
 
     // Validate player_count
-    if (tournament.player_count !== 16 && tournament.player_count !== 24) {
+    if (!isValidPlayerCount(tournament.player_count)) {
       result.error = 'Invalid player count';
       results.push(result);
       continue;

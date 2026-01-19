@@ -27,7 +27,7 @@ export {
   comparePlayerLists,
   hasDiffChanges,
 } from './playerMapper';
-export type { MappedPlayer, PlayerDiff } from './playerMapper';
+export type { MappedPlayer, PlayerDiff, TournamentPreview } from './playerMapper';
 
 export {
   mapMatchPlayGames,

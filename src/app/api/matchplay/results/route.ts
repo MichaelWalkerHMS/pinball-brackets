@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createMatchPlayClient, safeMatchPlayCall, mapMatchPlayGames, countResultsByRound } from '@/lib/matchplay';
 import { recalculateScores } from '@/lib/scoring';
-import { ROUND_NAMES } from '@/lib/bracket/constants';
+import { ROUND_NAMES, isValidPlayerCount, VALID_PLAYER_COUNTS } from '@/lib/bracket/constants';
 
 interface SyncResultsRequest {
   tournamentId: string;
@@ -92,9 +92,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<SyncResul
     );
   }
 
-  if (tournament.player_count !== 16 && tournament.player_count !== 24) {
+  if (!isValidPlayerCount(tournament.player_count)) {
     return NextResponse.json(
-      { success: false, imported: 0, skipped: 0, byRound: {}, error: 'Invalid player count (must be 16 or 24)' },
+      { success: false, imported: 0, skipped: 0, byRound: {}, error: `Invalid player count (must be ${VALID_PLAYER_COUNTS.join(' or ')})` },
       { status: 400 }
     );
   }

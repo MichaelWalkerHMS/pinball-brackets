@@ -138,3 +138,20 @@ export function hasDiffChanges(diff: PlayerDiff): boolean {
     diff.renamed.length > 0
   );
 }
+
+/**
+ * Tournament preview response for bulk player sync
+ */
+export interface TournamentPreview {
+  tournament: {
+    id: string;
+    name: string;
+    matchplay_id: string;
+  };
+  players: MappedPlayer[];
+  diff: PlayerDiff | null;
+  hasChanges: boolean;
+  bracketCount: number;
+  existingCount: number;
+  error?: string;
+}

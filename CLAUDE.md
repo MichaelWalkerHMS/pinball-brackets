@@ -43,34 +43,18 @@ See `coding-standards.md` for established code patterns and conventions. All cod
 
 **CRITICAL: All code must pass automated review before being pushed to GitHub.**
 
-**NEVER run `git push` until you have received `APPROVED` from the code review agent.**
+**NEVER run `git push` until the branch has a clean review (zero CRITICAL/HIGH findings).**
 
 **Exception:** Changes that ONLY modify `.md` files do not require code review.
 
-**Review loop (must complete before ANY push):**
+**Review loop (commit first, then run both checks against the branch):**
 
-1. Invoke the review subagent:
-   ```
-   Task: Review this branch using code-review-agent.md
-   Context: [brief summary of what you changed]
-   ```
-
-2. Handle the response:
-   - `APPROVED` → You may now push to GitHub and open the PR
-   - `CHANGES_REQUESTED` → Fix blocking issues, amend commit, **return to step 1**
-   - `ESCALATE_TO_HUMAN` → Stop and notify user
-
-3. **You MUST loop through steps 1-2 until you receive `APPROVED`.** Do not push after fixing issues without re-running the review.
-
-4. Maximum 5 review iterations. If unresolved, escalate.
-
-5. **REQUIRED: Log ALL deferred findings to `future-improvements.md`.**
-   - Any LOW or MEDIUM severity suggestion you choose NOT to fix MUST be added to `future-improvements.md`
-   - Use the format documented in that file (severity, date, area, files, current behavior, suggested fix, why deferred)
-   - This is NOT optional — deferred findings that aren't logged are lost context
-   - Prefer fixing issues while context is fresh, but always log what you defer
-
-**Never push code that hasn't been approved by the review subagent.**
+1. **Correctness review:** run the built-in `/code-review high` on the branch.
+2. **Project rules review:** spawn a subagent with the prompt in `code-review-agent.md` plus a one-line summary of the change. It returns `APPROVED` or `CHANGES_REQUESTED`.
+3. Fix every CRITICAL/HIGH finding in a **new commit** (don't amend; separate commits are easier for the user to review), then re-run both checks. Don't push after fixing without re-reviewing.
+4. Maximum 5 iterations. If CRITICAL/HIGH issues remain, stop and escalate to the user.
+5. Fix MEDIUM findings where reasonable. Log any deferred MEDIUM+ finding in `future-improvements.md` (short format in that file). Drop LOW suggestions.
+6. Put a short **Review** section in the PR description: what was found, what was fixed, what was deferred.
 
 ### Code Changes
 
@@ -84,7 +68,7 @@ All code changes must go through a PR for user review before merging. This ensur
 **Required workflow:**
 1. Create a feature branch: `git checkout -b fix/descriptive-name` or `feature/descriptive-name`
 2. Make commits on the feature branch
-3. Run code review agent (see Pre-Push Code Review above)
+3. Run the review loop (see Pre-Push Code Review above)
 4. Push the branch: `git push -u origin <branch-name>`
 5. Create PR: `gh pr create`
 6. User reviews PR and preview deployment
@@ -124,7 +108,7 @@ All code changes must go through a PR for user review before merging. This ensur
 - **Stack:** Playwright (Chrome, Firefox, Safari + mobile)
 - **Run:** `npm run test:e2e` | `npm run test:e2e:ui`
 - **Location:** `e2e/` directory
-- **CI:** Runs automatically on PRs
+- **CI:** Temporarily disabled. The GitHub secrets still use the old single-account names (`E2E_TEST_EMAIL`), but `e2e/fixtures/auth.ts` expects per-worker accounts (`E2E_TEST_EMAIL_0`, ...) and `E2E_ADMIN_*`. Re-enable the `e2e-tests` job in `.github/workflows/ci.yml` once the secrets are fixed. Until then, run E2E locally when `.env.test` is available.
 
 ### E2E Test Requirements
 - **New features:** Must include E2E test for the user journey

@@ -146,15 +146,17 @@ export class MatchPlayError extends Error {
 
 ---
 
-### Thorough API Client Test Coverage
+### Focused API Client Test Coverage
 
-**Rule:** API client tests should cover:
-- Constructor behavior (explicit config, environment fallbacks, missing config errors)
-- All public methods with successful responses
-- Error scenarios (404, 401, 429, 500)
-- Non-JSON error response handling
+**Rule:** API client tests should cover behavior that could realistically break:
+- Missing config (e.g. API key not set)
+- Each public method's request shape and response mapping
+- The external API's quirks (odd status codes, null bodies, non-JSON errors)
+- How errors surface to callers
 
-**Origin:** Praised in Match Play API Client review on 2026-01-11
+Don't add one test per HTTP status code when they all take the same code path.
+
+**Origin:** Match Play API Client review on 2026-01-11; narrowed 2026-10-06 to avoid coverage-only tests
 
 ---
 

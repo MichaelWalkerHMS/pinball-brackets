@@ -1,36 +1,18 @@
 # Future Improvements
 
-This document tracks non-blocking code review findings, technical debt, and improvement suggestions that were deferred for future work. Each entry includes enough context for a future developer or Claude session to understand and implement the improvement without needing the original conversation context.
+Deferred code review findings worth coming back to. Only log **MEDIUM or higher** findings you chose not to fix; LOW suggestions are dropped rather than logged. Prefer fixing while context is fresh.
 
 ## Format Guide
 
-When adding new entries, use this format:
+Keep entries short — enough for a future session to find and understand the issue, not a full write-up:
 
 ```markdown
 ### [SEVERITY] Short Description
-**Added:** YYYY-MM-DD | **Source:** PR #XX / Code Review / Manual
-**Area:** Category (e.g., Error Handling, Performance, Security, UX, Code Quality)
-**Files:** `path/to/file.ts` (lines X-Y)
-
-**Current Behavior:**
-Description of what the code currently does.
-
-**Suggested Improvement:**
-Description of what should change and why.
-
-**Code Context:**
-\`\`\`typescript
-// Relevant code snippet showing current implementation
-\`\`\`
-
-**Suggested Fix:**
-\`\`\`typescript
-// Example of how to fix it
-\`\`\`
-
-**Why Deferred:**
-Reason this wasn't fixed immediately (e.g., non-blocking, time constraints, needs discussion).
+**Added:** YYYY-MM-DD (PR #XX) | **Files:** `path/to/file.ts`
+What's wrong and the suggested fix, in 1-3 sentences. Why deferred.
 ```
+
+Remove an entry in the same PR that fixes it.
 
 Severity levels:
 - **[CRITICAL]** - Security or data integrity issues that should be addressed soon

@@ -172,7 +172,11 @@ export default function MatchupAnalysisModal({
               {state.status === "loaded" && state.data.record ? (
                 <HeadToHeadSummary data={state.data} record={state.data.record} />
               ) : (
-                <p className="text-sm text-[rgb(var(--color-text-muted))]">{NO_IFPA_NUMBER}</p>
+                <p className="text-sm text-[rgb(var(--color-text-muted))]">
+                  {topPlayer.ifpa_id === null || bottomPlayer.ifpa_id === null
+                    ? NO_IFPA_NUMBER
+                    : "Head-to-head unavailable"}
+                </p>
               )}
             </div>
           )}

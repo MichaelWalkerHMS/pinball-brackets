@@ -77,7 +77,7 @@ export async function safeMatchPlayCall<T>(
  *   const tournament = await client.getTournament('12345');
  */
 export class MatchPlayClient {
-  private readonly baseUrl = 'https://app.matchplay.events/api';
+  private readonly baseUrl = 'https://api.matchplay.events/api';
   private readonly token: string;
 
   constructor(token?: string) {

@@ -113,7 +113,7 @@ function mapRound(mpRound: number, playerCount: 16 | 24): number {
 **Key Code:**
 ```typescript
 export class MatchPlayClient {
-  private baseUrl = 'https://app.matchplay.events/api';
+  private baseUrl = 'https://api.matchplay.events/api';
 
   async getTournamentWithPlayers(id: string) {
     return this.fetch(`/tournaments/${id}?includePlayers=true`);

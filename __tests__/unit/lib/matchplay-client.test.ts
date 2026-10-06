@@ -4,7 +4,7 @@ import { server } from '../../mocks/server';
 import { MatchPlayClient, createMatchPlayClient, safeMatchPlayCall } from '@/lib/matchplay/client';
 import { MatchPlayError } from '@/lib/matchplay/types';
 
-const MATCHPLAY_BASE_URL = 'https://app.matchplay.events/api';
+const MATCHPLAY_BASE_URL = 'https://api.matchplay.events/api';
 
 // Mock tournament response
 const mockTournament = {

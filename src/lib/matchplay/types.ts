@@ -2,7 +2,7 @@
  * Match Play Events API Types
  *
  * These types represent the response structures from the Match Play Events API.
- * API Documentation: https://app.matchplay.events/api
+ * API Documentation: https://api.matchplay.events/api
  */
 
 // ============================================================================

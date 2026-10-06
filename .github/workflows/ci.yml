@@ -62,8 +62,13 @@ jobs:
       - name: Run unit tests
         run: npm test
 
+  # Temporarily disabled: e2e/fixtures/auth.ts expects per-worker secrets
+  # (E2E_TEST_EMAIL_0, E2E_TEST_PASSWORD_0, E2E_TEST_USER_ID_0, E2E_ADMIN_EMAIL,
+  # E2E_ADMIN_PASSWORD) but the repo still has the old single-account secrets,
+  # so every logged-in test fails. Remove `if: false` once the secrets are added.
   e2e-tests:
     name: E2E Tests
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [typecheck, unit-tests]  # Run after type check and unit tests pass

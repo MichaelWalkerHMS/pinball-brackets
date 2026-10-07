@@ -124,6 +124,7 @@ function PlayerHeader({ player, photoUrl, pinballInitials }: PlayerHeaderProps) 
           className="text-xs font-mono font-bold tracking-widest text-[rgb(var(--color-text-secondary))]"
           title="Pinball initials"
         >
+          <span className="sr-only">Pinball initials: </span>
           {pinballInitials}
         </p>
       )}

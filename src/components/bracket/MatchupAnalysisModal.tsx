@@ -94,7 +94,13 @@ function PlayerAvatar({ name, photoUrl }: { name: string; photoUrl: string | nul
   );
 }
 
-function PlayerHeader({ player, photoUrl }: { player: Player; photoUrl: string | null | undefined }) {
+interface PlayerHeaderProps {
+  player: Player;
+  photoUrl: string | null | undefined;
+  pinballInitials: string | null | undefined;
+}
+
+function PlayerHeader({ player, photoUrl, pinballInitials }: PlayerHeaderProps) {
   return (
     <div className="text-center">
       <PlayerAvatar key={photoUrl ?? "none"} name={player.name} photoUrl={photoUrl} />
@@ -112,6 +118,14 @@ function PlayerHeader({ player, photoUrl }: { player: Player; photoUrl: string |
           {player.name}
           <span className="sr-only"> (IFPA profile, opens in a new tab)</span>
         </a>
+      )}
+      {pinballInitials && (
+        <p
+          className="text-xs font-mono font-bold tracking-widest text-[rgb(var(--color-text-secondary))]"
+          title="Pinball initials"
+        >
+          {pinballInitials}
+        </p>
       )}
       {player.ifpa_id === null && (
         <p className="text-xs text-[rgb(var(--color-warning-text))]">{NO_IFPA_NUMBER}</p>
@@ -202,9 +216,9 @@ export default function MatchupAnalysisModal({
 
         <div className="p-6">
           <div className="grid grid-cols-3 items-center mb-2">
-            <PlayerHeader player={topPlayer} photoUrl={photoFor(topPlayer, loadedData?.player1)} />
+            <PlayerHeader player={topPlayer} photoUrl={photoFor(topPlayer, loadedData?.player1)} pinballInitials={loadedData?.player1?.pinballInitials} />
             <span className="text-center text-sm font-bold text-[rgb(var(--color-text-muted))]">vs</span>
-            <PlayerHeader player={bottomPlayer} photoUrl={photoFor(bottomPlayer, loadedData?.player2)} />
+            <PlayerHeader player={bottomPlayer} photoUrl={photoFor(bottomPlayer, loadedData?.player2)} pinballInitials={loadedData?.player2?.pinballInitials} />
           </div>
 
           {!hasAnyIfpaId ? null : state.status === "loading" ? (

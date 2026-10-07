@@ -99,7 +99,20 @@ function PlayerHeader({ player, photoUrl }: { player: Player; photoUrl: string |
     <div className="text-center">
       <PlayerAvatar key={photoUrl ?? "none"} name={player.name} photoUrl={photoUrl} />
       <p className="text-xs text-[rgb(var(--color-text-muted))]">Seed {player.seed}</p>
-      <p className="font-semibold text-[rgb(var(--color-text-primary))]">{player.name}</p>
+      {player.ifpa_id === null ? (
+        <p className="font-semibold text-[rgb(var(--color-text-primary))]">{player.name}</p>
+      ) : (
+        <a
+          href={`https://www.ifpapinball.com/players/view.php?p=${player.ifpa_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="View IFPA profile"
+          className="font-semibold text-[rgb(var(--color-accent-primary))] hover:text-[rgb(var(--color-accent-hover))] hover:underline"
+        >
+          {player.name}
+          <span className="sr-only"> (IFPA profile, opens in a new tab)</span>
+        </a>
+      )}
       {player.ifpa_id === null && (
         <p className="text-xs text-[rgb(var(--color-warning-text))]">{NO_IFPA_NUMBER}</p>
       )}

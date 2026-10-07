@@ -12,6 +12,7 @@ export interface IfpaPlayer {
   player_id: string;
   first_name: string;
   last_name: string;
+  initials: string | null;
   profile_photo: string | null;
   matchplay_events: {
     id: string;

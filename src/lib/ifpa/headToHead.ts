@@ -6,6 +6,7 @@ export interface PlayerStats {
   ifpaRating: number | null;
   matchplayRating: number | null;
   photoUrl: string | null;
+  pinballInitials: string | null;
 }
 
 export interface HeadToHeadMeeting {
@@ -58,6 +59,7 @@ function toPlayerStats(ifpaId: number | null, byId: Map<number, IfpaPlayer>): Pl
     ifpaRating: rating === null ? null : Math.round(rating),
     matchplayRating: toPositiveNumber(player?.matchplay_events?.rating),
     photoUrl: toPhotoUrl(player?.profile_photo),
+    pinballInitials: player?.initials?.trim() || null,
   };
 }
 

@@ -11,6 +11,7 @@ function makePlayer(id: string, open: Partial<{ current_rank: string; ratings_va
     player_id: id,
     first_name: 'Test',
     last_name: `Player ${id}`,
+    initials: '',
     profile_photo: null,
     matchplay_events: mpRating === undefined ? null : { id: '1', rating: mpRating, rank: '1' },
     player_stats: {
@@ -100,19 +101,19 @@ describe('buildHeadToHead', () => {
     const result = buildHeadToHead(
       1,
       2,
-      [makePlayer('2', { current_rank: '92', ratings_value: '1801.23' }, '1675'), makePlayer('1', { current_rank: '678', ratings_value: '1771.6' }, '1535')],
+      [makePlayer('2', { current_rank: '92', ratings_value: '1801.23' }, '1675'), { ...makePlayer('1', { current_rank: '678', ratings_value: '1771.6' }, '1535'), initials: ' CHD ' }],
       []
     );
 
-    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: 678, ifpaRating: 1772, matchplayRating: 1535, photoUrl: null });
-    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: 92, ifpaRating: 1801, matchplayRating: 1675, photoUrl: null });
+    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: 678, ifpaRating: 1772, matchplayRating: 1535, photoUrl: null, pinballInitials: 'CHD' });
+    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: 92, ifpaRating: 1801, matchplayRating: 1675, photoUrl: null, pinballInitials: null });
   });
 
   it('treats unranked, unrated, and missing players as null', () => {
     const result = buildHeadToHead(1, 2, [makePlayer('1', { current_rank: '0', ratings_value: '' })], []);
 
-    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: null, ifpaRating: null, matchplayRating: null, photoUrl: null });
-    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: null, ifpaRating: null, matchplayRating: null, photoUrl: null });
+    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: null, ifpaRating: null, matchplayRating: null, photoUrl: null, pinballInitials: null });
+    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: null, ifpaRating: null, matchplayRating: null, photoUrl: null, pinballInitials: null });
   });
 
   it('only keeps IFPA-hosted profile photos', () => {

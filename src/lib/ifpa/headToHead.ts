@@ -5,6 +5,7 @@ export interface PlayerStats {
   ifpaRank: number | null;
   ifpaRating: number | null;
   matchplayRating: number | null;
+  photoUrl: string | null;
 }
 
 export interface HeadToHeadMeeting {
@@ -38,6 +39,14 @@ function toPositiveNumber(value: string | null | undefined): number | null {
   return value && Number.isFinite(n) && n > 0 ? n : null;
 }
 
+const IFPA_PHOTO_PREFIX = 'https://www.ifpapinball.com/';
+
+// IFPA returns "" when a player has no photo. The URL is rendered as an <img src>
+// in the browser, so only accept IFPA-hosted images.
+function toPhotoUrl(value: string | null | undefined): string | null {
+  return value?.startsWith(IFPA_PHOTO_PREFIX) ? value : null;
+}
+
 function toPlayerStats(ifpaId: number | null, byId: Map<number, IfpaPlayer>): PlayerStats | null {
   if (ifpaId === null) return null;
   const player = byId.get(ifpaId);
@@ -48,6 +57,7 @@ function toPlayerStats(ifpaId: number | null, byId: Map<number, IfpaPlayer>): Pl
     ifpaRank: toPositiveNumber(open?.current_rank),
     ifpaRating: rating === null ? null : Math.round(rating),
     matchplayRating: toPositiveNumber(player?.matchplay_events?.rating),
+    photoUrl: toPhotoUrl(player?.profile_photo),
   };
 }
 

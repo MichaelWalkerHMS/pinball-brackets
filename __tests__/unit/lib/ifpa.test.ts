@@ -104,15 +104,33 @@ describe('buildHeadToHead', () => {
       []
     );
 
-    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: 678, ifpaRating: 1772, matchplayRating: 1535 });
-    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: 92, ifpaRating: 1801, matchplayRating: 1675 });
+    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: 678, ifpaRating: 1772, matchplayRating: 1535, photoUrl: null });
+    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: 92, ifpaRating: 1801, matchplayRating: 1675, photoUrl: null });
   });
 
   it('treats unranked, unrated, and missing players as null', () => {
     const result = buildHeadToHead(1, 2, [makePlayer('1', { current_rank: '0', ratings_value: '' })], []);
 
-    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: null, ifpaRating: null, matchplayRating: null });
-    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: null, ifpaRating: null, matchplayRating: null });
+    expect(result.player1).toEqual({ ifpaId: 1, ifpaRank: null, ifpaRating: null, matchplayRating: null, photoUrl: null });
+    expect(result.player2).toEqual({ ifpaId: 2, ifpaRank: null, ifpaRating: null, matchplayRating: null, photoUrl: null });
+  });
+
+  it('only keeps IFPA-hosted profile photos', () => {
+    const photo = 'https://www.ifpapinball.com/images/profiles/players/1.jpg';
+    const result = buildHeadToHead(
+      1,
+      2,
+      [
+        { ...makePlayer('1', {}), profile_photo: photo },
+        { ...makePlayer('2', {}), profile_photo: '' },
+      ],
+      []
+    );
+    const offHost = buildHeadToHead(3, null, [{ ...makePlayer('3', {}), profile_photo: 'https://evil.example/x.jpg' }], null);
+
+    expect(result.player1?.photoUrl).toBe(photo);
+    expect(result.player2?.photoUrl).toBeNull();
+    expect(offHost.player1?.photoUrl).toBeNull();
   });
 
   it('returns no record when a player has no IFPA ID', () => {

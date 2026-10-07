@@ -55,9 +55,47 @@ function StatRow({ label, top, bottom, better, prefix = "" }: StatRowProps) {
   );
 }
 
-function PlayerHeader({ player }: { player: Player }) {
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+}
+
+function PlayerAvatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+  const [failed, setFailed] = useState(false);
+
+  if (photoUrl && !failed) {
+    return (
+      // Plain <img>: two small IFPA-hosted photos per modal don't justify
+      // next/image remotePatterns config or Vercel image-optimization quota
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt={name}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="w-16 h-16 mx-auto mb-1 rounded-full object-cover border border-[rgb(var(--color-border-secondary))]"
+      />
+    );
+  }
+
+  return (
+    <div
+      aria-hidden="true"
+      className="w-16 h-16 mx-auto mb-1 rounded-full flex items-center justify-center text-lg font-bold bg-[rgb(var(--color-bg-tertiary))] text-[rgb(var(--color-text-secondary))] border border-[rgb(var(--color-border-secondary))]"
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
+
+function PlayerHeader({ player, photoUrl }: { player: Player; photoUrl: string | null }) {
   return (
     <div className="text-center">
+      <PlayerAvatar key={photoUrl ?? "none"} name={player.name} photoUrl={photoUrl} />
       <p className="text-xs text-[rgb(var(--color-text-muted))]">Seed {player.seed}</p>
       <p className="font-semibold text-[rgb(var(--color-text-primary))]">{player.name}</p>
       {player.ifpa_id === null && (
@@ -111,6 +149,8 @@ export default function MatchupAnalysisModal({
     };
   }, [onClose]);
 
+  const loadedData = state.status === "loaded" ? state.data : null;
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
   };
@@ -143,9 +183,9 @@ export default function MatchupAnalysisModal({
 
         <div className="p-6">
           <div className="grid grid-cols-3 items-center mb-2">
-            <PlayerHeader player={topPlayer} />
+            <PlayerHeader player={topPlayer} photoUrl={loadedData?.player1?.photoUrl ?? null} />
             <span className="text-center text-sm font-bold text-[rgb(var(--color-text-muted))]">vs</span>
-            <PlayerHeader player={bottomPlayer} />
+            <PlayerHeader player={bottomPlayer} photoUrl={loadedData?.player2?.photoUrl ?? null} />
           </div>
 
           {!hasAnyIfpaId ? null : state.status === "loading" ? (

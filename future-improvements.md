@@ -24,6 +24,10 @@ Severity levels:
 
 ## Entries
 
+### [MEDIUM] Rate-limit the public IFPA head-to-head route
+**Added:** 2026-10-06 (Matchup Analysis PR) | **Files:** `src/app/api/ifpa/head-to-head/route.ts`
+The route is intentionally public and accepts any IFPA ID. The 6h fetch cache only helps for repeated pairs, so a script that cycles through IDs could use up our IFPA key's quota. Add per-IP limiting (or a Vercel firewall rule) if abuse shows up. Deferred: no abuse seen yet, and serverless rate limiting needs a shared store.
+
 ### [MEDIUM] Add Structured Logging Context to Console Statements
 **Added:** 2026-01-12 | **Source:** PR #46 / Code Review
 **Area:** Code Quality, Observability

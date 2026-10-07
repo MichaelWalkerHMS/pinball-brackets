@@ -1,8 +1,10 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import type { PlayerMap } from "@/lib/types";
 import type { PickResultInfo } from "./Round";
 import PlayerSlot from "./PlayerSlot";
+import MatchupAnalysisModal from "./MatchupAnalysisModal";
 
 interface MatchProps {
   round: number;
@@ -35,6 +37,9 @@ export default function Match({
   actualTopSeed,
   actualBottomSeed,
 }: MatchProps) {
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const closeAnalysis = useCallback(() => setIsAnalysisOpen(false), []);
+
   const handlePickTop = () => {
     if (topSeed !== null) {
       onPick(round, position, topSeed);
@@ -103,6 +108,11 @@ export default function Match({
   // Note: "Expected X" for unexpected participants (without result) is now shown
   // inline in each PlayerSlot, so we don't need a result bar for that case
 
+  const analysisTop = displayTopSeed !== null ? playerMap.get(displayTopSeed) : undefined;
+  const analysisBottom = displayBottomSeed !== null ? playerMap.get(displayBottomSeed) : undefined;
+  const analysisPlayers =
+    analysisTop && analysisBottom ? { top: analysisTop, bottom: analysisBottom } : null;
+
   // Only top-align slots when there's BOTH a result bar AND at least one unexpected participant
   // (need room for both the "Expected X" message in slot AND the result bar below)
   const hasAnyUnexpectedParticipant = topIsUnexpected || bottomIsUnexpected;
@@ -159,10 +169,30 @@ export default function Match({
             : resultBarColor === "red"
             ? "bg-[rgb(var(--color-error-bg))] text-[rgb(var(--color-error-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
             : "bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning-text))] border border-t-0 border-[rgb(var(--color-border-secondary))]"
-          : "invisible"
+          : "invisible order-last" // Move the empty spacer below the analysis button so the button sits under its own match
       }`}>
         {resultBarText || "\u00A0"} {/* Non-breaking space when empty to maintain height */}
       </div>
+      {/* Always rendered (invisible when unavailable) to keep MATCH_HEIGHT constant */}
+      <button
+        type="button"
+        onClick={() => setIsAnalysisOpen(true)}
+        disabled={!analysisPlayers}
+        className={`mt-1 h-6 w-full rounded text-xs font-medium border border-[rgb(var(--color-border-secondary))] bg-[rgb(var(--color-bg-secondary))] text-[rgb(var(--color-text-secondary))] hover:bg-[rgb(var(--color-bg-tertiary))] hover:text-[rgb(var(--color-text-primary))] ${
+          analysisPlayers ? "" : "invisible"
+        }`}
+      >
+        Matchup Analysis
+      </button>
+      {isAnalysisOpen && analysisPlayers && (
+        <MatchupAnalysisModal
+          // Remount (resetting loading state) if the participants change while open
+          key={`${analysisPlayers.top.seed}-${analysisPlayers.bottom.seed}`}
+          topPlayer={analysisPlayers.top}
+          bottomPlayer={analysisPlayers.bottom}
+          onClose={closeAnalysis}
+        />
+      )}
     </div>
   );
 }

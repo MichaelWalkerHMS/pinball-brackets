@@ -110,6 +110,7 @@ function PlayerHeader({ player, photoUrl }: { player: Player; photoUrl: string |
           className="font-semibold text-[rgb(var(--color-accent-primary))] hover:text-[rgb(var(--color-accent-hover))] hover:underline"
         >
           {player.name}
+          <span className="sr-only"> (IFPA profile, opens in a new tab)</span>
         </a>
       )}
       {player.ifpa_id === null && (

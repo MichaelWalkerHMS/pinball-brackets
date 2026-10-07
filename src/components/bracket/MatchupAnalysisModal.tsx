@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Player } from "@/lib/types";
-import type { HeadToHead, HeadToHeadRecord } from "@/lib/ifpa";
+import type { HeadToHead, HeadToHeadRecord, PlayerStats } from "@/lib/ifpa";
 
 interface MatchupAnalysisModalProps {
   topPlayer: Player;
@@ -64,18 +64,20 @@ function getInitials(name: string): string {
     .join("");
 }
 
-function PlayerAvatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+// photoUrl: undefined while IFPA data is loading (blank circle, so initials don't
+// flash before the photo), null when there's no photo (initials)
+function PlayerAvatar({ name, photoUrl }: { name: string; photoUrl: string | null | undefined }) {
   const [failed, setFailed] = useState(false);
 
   if (photoUrl && !failed) {
     return (
       // Plain <img>: two small IFPA-hosted photos per modal don't justify
-      // next/image remotePatterns config or Vercel image-optimization quota
+      // next/image remotePatterns config or Vercel image-optimization quota.
+      // Empty alt: the player's name is printed right below.
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={photoUrl}
-        alt={name}
-        loading="lazy"
+        alt=""
         onError={() => setFailed(true)}
         className="w-16 h-16 mx-auto mb-1 rounded-full object-cover border border-[rgb(var(--color-border-secondary))]"
       />
@@ -87,12 +89,12 @@ function PlayerAvatar({ name, photoUrl }: { name: string; photoUrl: string | nul
       aria-hidden="true"
       className="w-16 h-16 mx-auto mb-1 rounded-full flex items-center justify-center text-lg font-bold bg-[rgb(var(--color-bg-tertiary))] text-[rgb(var(--color-text-secondary))] border border-[rgb(var(--color-border-secondary))]"
     >
-      {getInitials(name)}
+      {photoUrl === undefined ? null : getInitials(name)}
     </div>
   );
 }
 
-function PlayerHeader({ player, photoUrl }: { player: Player; photoUrl: string | null }) {
+function PlayerHeader({ player, photoUrl }: { player: Player; photoUrl: string | null | undefined }) {
   return (
     <div className="text-center">
       <PlayerAvatar key={photoUrl ?? "none"} name={player.name} photoUrl={photoUrl} />
@@ -150,6 +152,10 @@ export default function MatchupAnalysisModal({
   }, [onClose]);
 
   const loadedData = state.status === "loaded" ? state.data : null;
+  const photoFor = (player: Player, stats: PlayerStats | null | undefined) => {
+    if (player.ifpa_id === null || state.status === "error") return null;
+    return loadedData ? (stats?.photoUrl ?? null) : undefined;
+  };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
@@ -183,9 +189,9 @@ export default function MatchupAnalysisModal({
 
         <div className="p-6">
           <div className="grid grid-cols-3 items-center mb-2">
-            <PlayerHeader player={topPlayer} photoUrl={loadedData?.player1?.photoUrl ?? null} />
+            <PlayerHeader player={topPlayer} photoUrl={photoFor(topPlayer, loadedData?.player1)} />
             <span className="text-center text-sm font-bold text-[rgb(var(--color-text-muted))]">vs</span>
-            <PlayerHeader player={bottomPlayer} photoUrl={loadedData?.player2?.photoUrl ?? null} />
+            <PlayerHeader player={bottomPlayer} photoUrl={photoFor(bottomPlayer, loadedData?.player2)} />
           </div>
 
           {!hasAnyIfpaId ? null : state.status === "loading" ? (

@@ -49,6 +49,7 @@ test.describe('Matchup Analysis', () => {
       await dialog.getByText('No IFPA Number Found').first().isVisible(),
       'Tournament players have no IFPA IDs in dev DB'
     )
+    await expect(dialog.locator('a[href^="https://www.ifpapinball.com/players/view.php?p="]')).toHaveCount(2)
     await expect(dialog.getByText('#490')).toBeVisible()
     await expect(dialog.getByText('27 – 5')).toBeVisible()
     await expect(dialog.getByText('Test Open')).toBeVisible()
